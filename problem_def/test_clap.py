@@ -5,7 +5,6 @@ The output:
 ESC50 Accuracy: 93.85%
 """
 
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,13 +20,13 @@ from sklearn.metrics import accuracy_score
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
-sys.path.append(PROJECT_ROOT)
-from datasets.esc50_dataset import ESC50
+sys.path.insert(0, PROJECT_ROOT)
+from datasets.esc50_dataset import ESC50Dataset
 
 
 # Load dataset
-root_path = "./data"
-dataset = ESC50(root=root_path, download=True)
+root_path = "../data"
+dataset = ESC50Dataset(root=root_path, download=True)
 
 # Load and initialize CLAP
 clap_model = CLAP(version = '2023', use_cuda=True)
