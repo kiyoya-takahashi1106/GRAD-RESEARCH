@@ -1,0 +1,187 @@
+import warnings
+warnings.filterwarnings("ignore")
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from torch.cuda.amp import autocast, GradScaler
+print(torch.__version__)
+print("CUDA available:", torch.cuda.is_available())
+
+import os
+import sys
+import argparse
+
+from model.model import Model
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+sys.path.insert(0, PROJECT_ROOT)
+from datasets.audiocaps_fea_dataset import AudioCapsFeaDataset
+from utils.utility import set_seed
+from utils.utility import conpute_similarity
+from utils.loss import Criterion
+
+
+def args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int)
+    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--lr", type=float)
+    parser.add_argument("--epochs", type=int)
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--dropout_rate", type=float)
+    # hp
+    parser.add_argument("--hp_contrastive", type=float)
+    parser.add_argument("--hp_sim", type=float)
+    parser.add_argument("--hp_discrim", type=float)
+    parser.add_argument("--hp_recon", type=float)
+    args = parser.parse_args()
+    return args
+
+
+def train(args):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = Model(
+        dropout_rate=args.dropout_rate
+    )
+    
+    # TensorBoard Writer設定
+    os.makedirs(f"runs/{args.dataset}", exist_ok=True)
+    log_dir = os.path.join("runs", args.dataset)
+    writer = SummaryWriter(log_dir=log_dir)
+    print(f"TensorBoard logs will be saved to: {log_dir}")
+    
+    # モデル全体をGPUに移動 
+    model = model.to(device)
+
+    scaler = GradScaler()
+    optimizer = torch.optim.AdamW(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=5e-3)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
+
+    # データセットとデータローダーの準備
+    train_dataset = AudioCapsFeaDataset(split='train')
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_dataset = AudioCapsFeaDataset(split='test')
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+
+    criterion = Criterion()
+    best_sim = 0.0
+    
+    for epoch in range(args.epochs):
+        # ===== Training =====
+        model.train()
+        contractive_loss_lst = []
+        sim_loss_lst = []
+        discrim_loss_lst = []
+        recon_loss_lst = []
+        loss_lst = []
+
+        for i, batch in enumerate(train_dataloader):
+            text_embedding, audio_embedding = batch
+            text_embedding = text_embedding.to(device)       
+            audio_embedding = audio_embedding.to(device)                            
+
+            common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
+
+            # loss計算
+            contractive_loss, sim_loss, discrim_text_loss, discrim_audio_loss, recon_text_loss, recon_audio_loss  =  criterion.compute_loss(
+                                                                                                                        text_embedding, audio_embedding,
+                                                                                                                        common_text, common_audio,
+                                                                                                                        discriminator_output_text, discriminator_output_audio,
+                                                                                                                        recon_text, recon_audio
+                                                                                                                    )
+            discrim_loss = (discrim_text_loss + discrim_audio_loss) / 2
+            recon_loss = (recon_text_loss + recon_audio_loss) / 2
+
+            # loss記録
+            contractive_loss = args.hp_contrastive * contractive_loss
+            contractive_loss_lst.append(contractive_loss.item())
+            sim_loss = args.hp_sim * sim_loss
+            sim_loss_lst.append(sim_loss.item())
+            discrim_loss = args.hp_discrim * discrim_loss
+            discrim_loss_lst.append(discrim_loss.item())
+            recon_loss = args.hp_recon * recon_loss
+            recon_loss_lst.append(recon_loss.item())
+
+            # 全体loss
+            loss = contractive_loss + sim_loss + discrim_loss + recon_loss
+            loss_lst.append(loss.item())
+
+            # backward
+            optimizer.zero_grad()
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+
+        scheduler.step()
+
+        # loss表示
+        print(f"Epoch {epoch}")
+        epoch_contractive_loss = sum(contractive_loss_lst) / len(contractive_loss_lst)
+        writer.add_scalars('Loss/Train/Epoch/contractive_Losses', {'Contractive': epoch_contractive_loss}, epoch)
+        print(f"Contractive: {epoch_contractive_loss:.6f}")
+        epoch_sim_loss = sum(sim_loss_lst) / len(sim_loss_lst)
+        writer.add_scalars('Loss/Train/Epoch/sim_Losses', {'Sim': epoch_sim_loss}, epoch)
+        print(f"Sim: {epoch_sim_loss:.6f}")
+        epoch_discrim_loss = sum(discrim_loss_lst) / len(discrim_loss_lst)
+        writer.add_scalars('Loss/Train/Epoch/discrim_Losses', {'Discriminator': epoch_discrim_loss}, epoch)
+        print(f"Discriminator: {epoch_discrim_loss:.6f}")
+        epoch_recon_loss = sum(recon_loss_lst) / len(recon_loss_lst)
+        writer.add_scalars('Loss/Train/Epoch/recon_Losses', {'Reconstruction': epoch_recon_loss}, epoch)
+        print(f"Reconstruction: {epoch_recon_loss:.6f}")
+        epoch_loss = sum(loss_lst) / len(loss_lst)
+        writer.add_scalars('Loss/Train/Epoch/overall_Losses', {'Overall': epoch_loss}, epoch)
+        print(f"OverALL: {epoch_loss:.6f}")
+
+
+        # ===== Evaluation =====
+        model.eval()
+        test_sim_lst = []
+
+        with torch.no_grad():
+            for batch in test_dataloader:
+                text_embedding, audio_embedding = batch
+                text_embedding = text_embedding.to(device)       
+                audio_embedding = audio_embedding.to(device)                            
+
+                common_text, common_audio, _, _, _, _ = model(text_embedding, audio_embedding)
+
+                sim = conpute_similarity(common_text, common_audio)
+                test_sim_lst.append(sim.item())
+
+        epoch_test_sim = sum(test_sim_lst) / len(test_sim_lst)
+        writer.add_scalars('Loss/Test/Epoch/Sim', {'Sim': epoch_test_sim}, epoch)
+        print(f"Test Sim: {epoch_test_sim:.6f}")
+
+        
+        # モデル保存
+        if (best_sim < epoch_test_sim):
+            best_sim = epoch_test_sim
+            os.makedirs(
+                f"saved_models/{args.dataset}/", exist_ok=True
+            )
+            best_model_path = (
+                f"saved_models/{args.dataset}/"
+                f"epoch{epoch}.pth"
+            )
+            torch.save(model.state_dict(), best_model_path)
+            print(f"We've saved the new model (Sim: {best_sim:.4f})")
+        print("----------------------------------------------------------------------------")
+
+    print(f"Best Sim: {best_sim:.4f}")
+    writer.close()
+    return
+
+
+
+if (__name__ == "__main__"):
+    _args = args()
+    for arg in vars(_args):
+        print(f"{arg}: {getattr(_args, arg)}")
+    set_seed(_args.seed)
+    train(_args)
