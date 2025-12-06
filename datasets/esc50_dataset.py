@@ -24,7 +24,7 @@ class AudioDataset(Dataset):
 
 
 
-class ESC50(AudioDataset):
+class ESC50Dataset(AudioDataset):
     base_folder = 'ESC-50-master'
     url = "https://github.com/karoldvl/ESC-50/archive/master.zip"
     filename = "ESC-50-master.zip"
