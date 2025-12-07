@@ -22,7 +22,8 @@ PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
 from datasets.audiocaps_fea_dataset import AudioCapsFeaDataset
 from utils.utility import set_seed
-from utils.utility import conpute_similarity
+from utils.utility import compute_similarity
+from utils.utility import compute_contrastive_similarity
 from utils.loss import Criterion
 
 
@@ -70,7 +71,7 @@ def train(args):
 
 
     criterion = Criterion()
-    best_sim = 0.0
+    best_contractive = float('inf')
     
     for epoch in range(args.epochs):
         # ===== Training =====
@@ -141,7 +142,7 @@ def train(args):
 
         # ===== Evaluation =====
         model.eval()
-        test_sim_lst = []
+        test_contractive_lst = []
 
         with torch.no_grad():
             for batch in test_dataloader:
@@ -151,17 +152,17 @@ def train(args):
 
                 common_text, common_audio, _, _, _, _ = model(text_embedding, audio_embedding)
 
-                sim = conpute_similarity(common_text, common_audio)
-                test_sim_lst.append(sim.item())
+                contractive = compute_contrastive_similarity(common_text, common_audio)
+                contractive = args.hp_contrastive * contractive
+                test_contractive_lst.append(contractive.item())
 
-        epoch_test_sim = sum(test_sim_lst) / len(test_sim_lst)
-        writer.add_scalars('Loss/Test/Epoch/Sim', {'Sim': epoch_test_sim}, epoch)
-        print(f"Test Sim: {epoch_test_sim:.6f}")
-
+        epoch_test_contractive = sum(test_contractive_lst) / len(test_contractive_lst)
+        writer.add_scalars('Loss/Test/Epoch/Contrastive', {'Contrastive': epoch_test_contractive}, epoch)
+        print(f"Test Contrastive: {epoch_test_contractive:.6f}")
         
         # モデル保存
-        if (best_sim < epoch_test_sim):
-            best_sim = epoch_test_sim
+        if (epoch_test_contractive < best_contractive):
+            best_contractive = epoch_test_contractive
             os.makedirs(
                 f"saved_models/{args.dataset}/", exist_ok=True
             )
@@ -170,10 +171,10 @@ def train(args):
                 f"epoch{epoch}.pth"
             )
             torch.save(model.state_dict(), best_model_path)
-            print(f"We've saved the new model (Sim: {best_sim:.4f})")
+            print(f"We've saved the new model (Contrastive: {best_contractive:.4f})")
         print("----------------------------------------------------------------------------")
 
-    print(f"Best Sim: {best_sim:.4f}")
+    print(f"Best Contrastive: {best_contractive:.4f}")
     writer.close()
     return
 
