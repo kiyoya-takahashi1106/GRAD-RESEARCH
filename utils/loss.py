@@ -3,6 +3,33 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class ClapCriterion:
+    def __init__(self):
+        pass
+
+    def compute_loss(self, text_embedding, audio_embedding):
+        """
+        CLAPのコントラスト学習損失を計算する
+        """
+        batch_size = text_embedding.size(0)
+        temperature = 0.1
+
+        # 正規化
+        text_embedding_norm = F.normalize(text_embedding, p=2, dim=1)
+        audio_embedding_norm = F.normalize(audio_embedding, p=2, dim=1)
+
+        # 類似度計算
+        logits = torch.matmul(text_embedding_norm, audio_embedding_norm.T) / temperature
+
+        labels = torch.arange(batch_size).to(text_embedding.device)
+
+        loss_text_to_audio = F.cross_entropy(logits, labels)
+        loss_audio_to_text = F.cross_entropy(logits.T, labels)
+
+        loss = (loss_text_to_audio + loss_audio_to_text) / 2
+        return loss
+    
+
 class Criterion:
     def __init__(self):
         pass
