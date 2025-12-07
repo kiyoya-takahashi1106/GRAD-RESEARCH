@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
+import torchaudio
 
+import os
+import sys
 from pathlib import Path
 
 from datasets.audiocaps_dataset import AudioCapsDataset
@@ -29,5 +32,15 @@ class MixDataset(Dataset):
         return len(self.samples)
 
 
-    def __getitem__(self, i: int):
-        return self.samples[i]
+    def __getitem__(self, idx):
+        caption, path = self.samples[idx]
+
+        TARGET_SR = 16000
+        wav, sr = torchaudio.load(path)
+        if (wav.size(0) > 1):
+            wav = wav.mean(dim=0, keepdim=True)
+        if (sr != TARGET_SR):
+            wav = torchaudio.functional.resample(wav, sr, TARGET_SR)
+        wav = wav.squeeze(0)
+
+        return caption, wav
