@@ -17,10 +17,11 @@ import argparse
 
 from model.model import Model
 
+from datasets.audiocaps_fea_dataset import AudioCapsFeaDataset
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
-from datasets.audiocaps_fea_dataset import AudioCapsFeaDataset
 from utils.utility import set_seed
 from utils.utility import compute_similarity
 from utils.utility import compute_contrastive_similarity

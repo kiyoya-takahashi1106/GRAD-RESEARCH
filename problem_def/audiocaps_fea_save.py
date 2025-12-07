@@ -11,10 +11,8 @@ import sys
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
-sys.path.insert(0, PROJECT_ROOT)
 from datasets.audiocaps_dataset import AudioCapsDataset
+
 
 # Load CLAP model
 clap_model = CLAP(version='2023', use_cuda=torch.cuda.is_available())
