@@ -14,6 +14,8 @@ print("CUDA available:", torch.cuda.is_available())
 import os
 import sys
 import argparse
+from tqdm.auto import tqdm
+from functools import partial
 
 from model.clap import Clap
 from model.method_model import MethodModel
@@ -60,6 +62,8 @@ def train(args):
         model = MethodModel(
             dropout_rate=args.dropout_rate
         )
+    text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+    audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     
     # TensorBoard Writer設定
     os.makedirs(f"runs/{args.model_type}_{args.dataset}", exist_ok=True)
@@ -84,8 +88,11 @@ def train(args):
     elif (args.dataset == "mix"):
         train_dataset = MixDataset(split='train')
         test_dataset = MixDataset(split='val')
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, text_tokenizer=RobertaTokenizerFast, audio_processor=Wav2Vec2Processor)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, text_tokenizer=RobertaTokenizerFast, audio_processor=Wav2Vec2Processor)
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
+
+    print("train dataset size:", len(train_dataset))
+    print("test dataset size:", len(test_dataset))
 
     if (args.model_type == "clap"):
         criterion = ClapCriterion()
@@ -104,10 +111,13 @@ def train(args):
         recon_loss_lst = []
         loss_lst = []
 
-        for i, batch in enumerate(train_dataloader):
+        train_bar = tqdm(train_dataloader, desc=f"Train Epoch {epoch+1}/{args.epochs}", leave=False)
+        for i, batch in enumerate(train_bar):
             text_x, text_attn_mask, audio_x, audio_attn_mask = batch
             text_x = text_x.to(device)       
+            text_attn_mask = text_attn_mask.to(device)
             audio_x = audio_x.to(device) 
+            audio_attn_mask = audio_attn_mask.to(device)
 
             # forward
             if (args.model_type == "clap"):      
@@ -177,10 +187,13 @@ def train(args):
         test_contractive_lst = []
 
         with torch.no_grad():
-            for batch in test_dataloader:
+            test_bar = tqdm(test_dataloader, desc=f"Test Epoch {epoch+1}/{args.epochs}", leave=False)
+            for batch in test_bar:
                 text_x, text_attn_mask, audio_x, audio_attn_mask = batch
                 text_x = text_x.to(device)       
+                text_attn_mask = text_attn_mask.to(device)
                 audio_x = audio_x.to(device)                            
+                audio_attn_mask = audio_attn_mask.to(device)
 
                 if (args.model_type == "clap"):
                     text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
