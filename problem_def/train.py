@@ -67,7 +67,7 @@ def train(args):
     # データセットとデータローダーの準備
     train_dataset = AudioCapsFeaDataset(split='train')
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_dataset = AudioCapsFeaDataset(split='test')
+    test_dataset = AudioCapsFeaDataset(split='val')
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
 
 
