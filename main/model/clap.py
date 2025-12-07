@@ -15,7 +15,7 @@ class Clap(nn.Module):
         super(Clap, self).__init__()        
 
         # encoder
-        self.text_encoder = AutoModel.from_pretrained("roberta-base")
+        self.text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False)
         self.audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base")
 
         # ===== 重み固定 =====
