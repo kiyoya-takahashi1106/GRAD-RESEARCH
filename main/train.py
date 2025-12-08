@@ -66,8 +66,8 @@ def train(args):
     audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     
     # TensorBoard Writer設定
-    os.makedirs(f"runs/{args.model_type}_{args.dataset}", exist_ok=True)
-    log_dir = os.path.join("runs", f"{args.model_type}_{args.dataset}")
+    os.makedirs(f"runs/train/{args.model_type}_{args.dataset}", exist_ok=True)
+    log_dir = os.path.join("runs", f"train/{args.model_type}_{args.dataset}")
     writer = SummaryWriter(log_dir=log_dir)
     print(f"TensorBoard logs will be saved to: {log_dir}")
     
@@ -214,10 +214,10 @@ def train(args):
         if (epoch_test_contractive < best_contractive):
             best_contractive = epoch_test_contractive
             os.makedirs(
-                f"saved_models/{args.model_type}_{args.dataset}/", exist_ok=True
+                f"saved_models/train/{args.model_type}_{args.dataset}/", exist_ok=True
             )
             best_model_path = (
-                f"saved_models/{args.model_type}_{args.dataset}/"
+                f"saved_models/train/{args.model_type}_{args.dataset}/"
                 f"epoch{epoch}.pth"
             )
             torch.save(model.state_dict(), best_model_path)
