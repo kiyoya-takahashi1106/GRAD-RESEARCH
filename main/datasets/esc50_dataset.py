@@ -14,6 +14,8 @@ class ESC50Dataset(Dataset):
         self.text_tokenizer = text_tokenizer
         self.audio_processor = audio_processor
 
+        self.root = root
+
         self.metadata_path = Path(root) / "ESC-50-master" / "meta" / "esc50.csv"
         self.metadata = pd.read_csv(self.metadata_path)
 
@@ -30,11 +32,10 @@ class ESC50Dataset(Dataset):
     # get class, add prompt
     def get_class(self):
         classes = []
-        for line in self.metadata:
-            category = line['category']
-            if (category not in classes):
-                text = self.prompt + category
-                classes.append(text)
+        categories = sorted(self.metadata["category"].unique())
+        for category in categories:
+            text = f"{self.prompt} {category}"
+            classes.append(text)
         return classes
 
     
@@ -54,7 +55,7 @@ class ESC50Dataset(Dataset):
         for _, row in self.metadata.iterrows():
             filename = row['filename']
             class_ = row['category']
-            audio_path = Path("../data") / "ESC-50-master" / "audio" / f"{filename}.wav"
+            audio_path = Path(self.root) / "ESC-50-master" / "audio" / f"{filename}"
             self.samples.append((audio_path, class_))
 
 
@@ -75,7 +76,8 @@ class ESC50Dataset(Dataset):
             wav = torchaudio.functional.resample(wav, sr, TARGET_SR)
         wav = wav.squeeze(0)
 
-        wav, attn = self.random_crop_or_pad(wav, target_len)
+        wav, attn_mask = self.random_crop_or_pad(wav, target_len)
+        attn_mask = attn_mask.unsqueeze(0)
 
         # すでに長さは揃っているので padding=False
         processor_output = self.audio_processor(
@@ -85,17 +87,17 @@ class ESC50Dataset(Dataset):
             return_tensors="pt",
         )
         audio_input_values = processor_output["input_values"]
-        audio_input_values = audio_input_values.squeeze(0)
 
         # one-hot vector
-        class_ = self.prompt + class_
+        class_ = f"{self.prompt} {class_}"
         one_hot_vec = torch.zeros(len(self.classes), dtype=torch.float)
         class_index = self.classes.index(class_)
         one_hot_vec[class_index] = 1.0
 
-        return audio_input_values, attn, one_hot_vec
+        return audio_input_values, attn_mask, one_hot_vec
 
     
+    # 5秒にランダムクロップ or パディング
     def random_crop_or_pad(self, wav: torch.Tensor, target_len: int = 16000 * 5):
         L = wav.size(0)
 
@@ -103,16 +105,16 @@ class ESC50Dataset(Dataset):
             if (L > target_len):
                 start = torch.randint(0, L - target_len + 1, (1,)).item()
                 wav = wav[start:start + target_len]
-            attn = torch.ones(target_len, dtype=torch.long)
-            return wav, attn
+            attn_mask = torch.ones(target_len, dtype=torch.long)
+            return wav, attn_mask
 
         # 5秒より短い場合 → 右側ゼロパディング
         pad_len = target_len - L
         padded = torch.cat([wav, torch.zeros(pad_len, device=wav.device)], dim=0)
 
-        attn = torch.cat([
+        attn_mask = torch.cat([
             torch.ones(L, dtype=torch.long, device=wav.device),
             torch.zeros(pad_len, dtype=torch.long, device=wav.device)
         ], dim=0)
 
-        return padded, attn
+        return padded, attn_mask
