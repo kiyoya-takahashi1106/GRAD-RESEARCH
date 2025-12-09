@@ -89,7 +89,7 @@ def train(args):
         train_dataset = MixDataset(split='train')
         test_dataset = MixDataset(split='val')
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
 
     print("train dataset size:", len(train_dataset))
     print("test dataset size:", len(test_dataset))
