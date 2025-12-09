@@ -48,14 +48,14 @@ class MethodModel(nn.Module):
 
     def forward(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         # enocode
-        text_x = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        audio_x = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
+        text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
+        audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
 
         # 共通-固有分離
-        common_text = self.common_text_linear(text_x)
-        private_text = self.private_text_linear(text_x)
-        common_audio = self.common_audio_linear(audio_x)
-        private_audio = self.private_audio_linear(audio_x)
+        common_text = self.common_text_linear(text_embedding)
+        private_text = self.private_text_linear(text_embedding)
+        common_audio = self.common_audio_linear(audio_embedding)
+        private_audio = self.private_audio_linear(audio_embedding)
 
         # 固有特徴同士の分類
         discriminator_output_text = self.discriminator(private_text)
@@ -65,16 +65,16 @@ class MethodModel(nn.Module):
         recon_text = self.recon_text_linear(torch.cat([common_text, private_text], dim=-1))
         recon_audio = self.recon_audio_linear(torch.cat([common_audio, private_audio], dim=-1))
 
-        return common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio
+        return text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio
     
     
     def extract_common_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
-        text_x = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        common_text = self.common_text_linear(text_x)
+        text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
+        common_text = self.common_text_linear(text_embedding)
         return common_text
     
 
     def extract_common_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
-        audio_x = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
-        common_audio = self.common_audio_linear(audio_x)
+        audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
+        common_audio = self.common_audio_linear(audio_embedding)
         return common_audio
