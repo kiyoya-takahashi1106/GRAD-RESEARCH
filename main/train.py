@@ -46,7 +46,7 @@ def args():
     # hp
     parser.add_argument("--hp_contrastive", type=float)
     parser.add_argument("--hp_sim", type=float)
-    parser.add_argument("--hp_discrim", type=float)
+    parser.add_argument("--hp_reverse_contrastive", type=float)
     parser.add_argument("--hp_recon", type=float)
     args = parser.parse_args()
     return args
@@ -107,7 +107,7 @@ def train(args):
         model.train()
         contractive_loss_lst = []
         sim_loss_lst = []
-        discrim_loss_lst = []
+        reverse_contrastive_loss_lst = []
         recon_loss_lst = []
         loss_lst = []
 
@@ -123,19 +123,18 @@ def train(args):
             if (args.model_type == "clap"):      
                 text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
             elif (args.model_type == "method"):                         
-                text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
 
             # compute loss
             if (args.model_type == "clap"):
                 contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
             elif (args.model_type == "method"):
-                contractive_loss, sim_loss, discrim_text_loss, discrim_audio_loss, recon_text_loss, recon_audio_loss  = criterion.compute_loss(
-                                                                                                                            text_embedding, audio_embedding,
-                                                                                                                            common_text, common_audio,
-                                                                                                                            discriminator_output_text, discriminator_output_audio,
-                                                                                                                            recon_text, recon_audio
-                                                                                                                        )
-                discrim_loss = (discrim_text_loss + discrim_audio_loss) / 2
+                contractive_loss, sim_loss, reverse_contrastive_loss, recon_text_loss, recon_audio_loss  =  criterion.compute_loss(
+                                                                                                                text_embedding, audio_embedding,
+                                                                                                                common_text, common_audio,
+                                                                                                                private_text, private_audio,
+                                                                                                                recon_text, recon_audio
+                                                                                                            )
                 recon_loss = (recon_text_loss + recon_audio_loss) / 2
 
             # recode loss
@@ -147,12 +146,12 @@ def train(args):
             elif (args.model_type == "method"):
                 sim_loss = args.hp_sim * sim_loss
                 sim_loss_lst.append(sim_loss.item())
-                discrim_loss = args.hp_discrim * discrim_loss
-                discrim_loss_lst.append(discrim_loss.item())
+                reverse_contrastive_loss = args.hp_reverse_contrastive * reverse_contrastive_loss
+                reverse_contrastive_loss_lst.append(reverse_contrastive_loss.item())
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
                 # 全体loss
-                loss = contractive_loss + sim_loss + discrim_loss + recon_loss
+                loss = contractive_loss + sim_loss + reverse_contrastive_loss + recon_loss
                 loss_lst.append(loss.item())
 
             if ((epoch == 0)):
@@ -160,7 +159,7 @@ def train(args):
                 print(f"Contractive Loss: {contractive_loss.item():.6f}")
                 if (args.model_type == "method"):
                     print(f"Sim Loss: {sim_loss.item():.6f}")
-                    print(f"Discriminator Loss: {discrim_loss.item():.6f}")
+                    print(f"Reverse Contrastive Loss: {reverse_contrastive_loss.item():.6f}")
                     print(f"Reconstruction Loss: {recon_loss.item():.6f}")
                 print("===========================") 
 
@@ -181,9 +180,9 @@ def train(args):
             epoch_sim_loss = sum(sim_loss_lst) / len(sim_loss_lst)
             writer.add_scalars('Loss/Train/Epoch/sim_Losses', {'Sim': epoch_sim_loss}, epoch)
             print(f"Sim: {epoch_sim_loss:.6f}")
-            epoch_discrim_loss = sum(discrim_loss_lst) / len(discrim_loss_lst)
-            writer.add_scalars('Loss/Train/Epoch/discrim_Losses', {'Discriminator': epoch_discrim_loss}, epoch)
-            print(f"Discriminator: {epoch_discrim_loss:.6f}")
+            epoch_reverse_contrastive_loss = sum(reverse_contrastive_loss_lst) / len(reverse_contrastive_loss_lst)      
+            writer.add_scalars('Loss/Train/Epoch/reverse_contrastive_Losses', {'Reverse Contrastive': epoch_reverse_contrastive_loss}, epoch)
+            print(f"Reverse Contrastive: {epoch_reverse_contrastive_loss:.6f}")
             epoch_recon_loss = sum(recon_loss_lst) / len(recon_loss_lst)
             writer.add_scalars('Loss/Train/Epoch/recon_Losses', {'Reconstruction': epoch_recon_loss}, epoch)
             print(f"Reconstruction: {epoch_recon_loss:.6f}")

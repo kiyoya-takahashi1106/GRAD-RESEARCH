@@ -1,4 +1,4 @@
-model_type="clap"
+model_type="method"
 training_dataset="audiocaps"
 dataset="esc50"
 

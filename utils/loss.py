@@ -34,7 +34,7 @@ class Criterion:
     def __init__(self):
         pass
 
-    def compute_loss(self, text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio):
+    def compute_loss(self, text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio):
         """
         Contrastive loss
         L2 loss
@@ -43,11 +43,10 @@ class Criterion:
         """
         contractive_loss = self.compute_contrastive_loss(common_text, common_audio)
         sim_loss = self.compute_sim_loss(common_text, common_audio)
-        discriminator_text_loss = self.compute_discriminator_loss(discriminator_output_text, "text")
-        discriminator_audio_loss = self.compute_discriminator_loss(discriminator_output_audio, "audio")
+        reverse_contrastive_loss = self.compute_reverse_contrastive_loss(private_text, private_audio)
         reconstruction_text_loss = self.compute_reconstruction_loss(text_embedding, recon_text)
         reconstruction_audio_loss = self.compute_reconstruction_loss(audio_embedding, recon_audio)
-        return contractive_loss, sim_loss, discriminator_text_loss, discriminator_audio_loss, reconstruction_text_loss, reconstruction_audio_loss
+        return contractive_loss, sim_loss, reverse_contrastive_loss, reconstruction_text_loss, reconstruction_audio_loss
     
     def compute_contrastive_loss(self, common_text, common_audio):
         """
@@ -82,14 +81,59 @@ class Criterion:
         sim_loss = 1.0 - sim
         return sim_loss
 
-    def compute_discriminator_loss(self, discriminator_output, modality: str):
+    def compute_reverse_contrastive_loss(self, private_text, private_audio):
         """
-        固有特徴に対して、discriminatorの損失を計算する
+        固有特徴に対して、逆対照学習を行う損失を計算する
         """
-        modality_label = 0 if modality == "text" else 1
-        labels = torch.full((discriminator_output.size(0),), modality_label, dtype=torch.long, device=discriminator_output.device)
-        loss = F.binary_cross_entropy_with_logits(discriminator_output.squeeze(), labels.float())
+        batch_size = private_text.size(0)
+        temperature = 0.1
+
+        # 正規化
+        private_text_norm = F.normalize(private_text, p=2, dim=1)
+        private_audio_norm = F.normalize(private_audio, p=2, dim=1)
+
+        # 類似度計算
+        logits = torch.matmul(private_text_norm, private_audio_norm.T) / temperature
+        
+        labels = torch.arange(batch_size).to(private_text.device)
+
+        loss_text_to_audio = F.cross_entropy(logits, labels)
+        loss_audio_to_text = F.cross_entropy(logits.T, labels)
+
+        loss = (loss_text_to_audio + loss_audio_to_text) / 2
         return loss
+    
+
+    def compute_reverse_contrastive_loss(self, private_text, private_audio):
+        """
+        固有特徴に対して、soft label（一様分布）を使った逆対照学習。
+        各行の softmax を 1/B に近づけ、特定ペアだけが大きくなるのを防ぐ。
+        """
+        batch_size = private_text.size(0)
+        temperature = 0.1
+
+        # 正規化
+        private_text_norm = F.normalize(private_text, p=2, dim=1)      # (B, D)
+        private_audio_norm = F.normalize(private_audio, p=2, dim=1)     # (B, D)
+
+        # 類似度計算
+        logits = torch.matmul(private_text_norm, private_audio_norm.T) / temperature
+
+        # 一様分布 p = [1/B, 1/B, ..., 1/B]
+        uniform_targets = torch.full((batch_size, batch_size), 1.0/batch_size, device=private_text.device)
+
+        # text → audio: row-wise softmax
+        log_probs_text_to_audio = F.log_softmax(logits, dim=1)
+        loss_text_to_audio = -(uniform_targets * log_probs_text_to_audio).sum(dim=1).mean()
+
+        # audio → text: column-wise softmax
+        log_probs_audio_to_text = F.log_softmax(logits.T, dim=1)
+        loss_audio_to_text = -(uniform_targets * log_probs_audio_to_text).sum(dim=1).mean()
+
+        loss = (loss_text_to_audio + loss_audio_to_text) / 2
+        return loss
+
+
 
     def compute_reconstruction_loss(self, embedding, recon):
         """

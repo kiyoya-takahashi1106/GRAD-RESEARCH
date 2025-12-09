@@ -32,7 +32,7 @@ class MethodModel(nn.Module):
         self.private_audio_linear = nn.Linear(hidden_dim, hidden_dim)
 
         # 固有同士の分類をするdiscriminator
-        self.discriminator = nn.Linear(hidden_dim, 1)
+        # self.discriminator = nn.Linear(hidden_dim, 1)
 
         # 再構成用のデコーダ
         self.recon_text_linear = nn.Linear(hidden_dim*2, hidden_dim)
@@ -58,14 +58,14 @@ class MethodModel(nn.Module):
         private_audio = self.private_audio_linear(audio_embedding)
 
         # 固有特徴同士の分類
-        discriminator_output_text = self.discriminator(private_text)
-        discriminator_output_audio = self.discriminator(private_audio)
+        # discriminator_output_text = self.discriminator(private_text)
+        # discriminator_output_audio = self.discriminator(private_audio)
 
         # 再構成
         recon_text = self.recon_text_linear(torch.cat([common_text, private_text], dim=-1))
         recon_audio = self.recon_audio_linear(torch.cat([common_audio, private_audio], dim=-1))
 
-        return text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio
+        return text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio
     
     
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
