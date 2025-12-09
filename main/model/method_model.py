@@ -68,13 +68,13 @@ class MethodModel(nn.Module):
         return text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio
     
     
-    def extract_common_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
+    def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
         text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
         common_text = self.common_text_linear(text_embedding)
         return common_text
     
 
-    def extract_common_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
+    def encode_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
         common_audio = self.common_audio_linear(audio_embedding)
         return common_audio
