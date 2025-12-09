@@ -123,13 +123,14 @@ def train(args):
             if (args.model_type == "clap"):      
                 text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
             elif (args.model_type == "method"):                         
-                common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                text_embedding, audio_embedding, common_text, common_audio, discriminator_output_text, discriminator_output_audio, recon_text, recon_audio = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
 
             # compute loss
             if (args.model_type == "clap"):
                 contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
             elif (args.model_type == "method"):
                 contractive_loss, sim_loss, discrim_text_loss, discrim_audio_loss, recon_text_loss, recon_audio_loss  = criterion.compute_loss(
+                                                                                                                            text_embedding, audio_embedding,
                                                                                                                             common_text, common_audio,
                                                                                                                             discriminator_output_text, discriminator_output_audio,
                                                                                                                             recon_text, recon_audio
@@ -198,7 +199,7 @@ def train(args):
                 if (args.model_type == "clap"):
                     text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
                 elif (args.model_type == "method"):
-                    common_text, common_audio, _, _, _, _ = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                    _, _, common_text, common_audio, _, _, _, _ = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
                     text_embedding = common_text
                     audio_embedding = common_audio
 

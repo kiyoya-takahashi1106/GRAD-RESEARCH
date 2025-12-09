@@ -1,4 +1,4 @@
-model_type="clap"
+model_type="method"
 dataset="audiocaps"
 
 mkdir -p logs/train/${model_type}_${dataset}
