@@ -155,6 +155,15 @@ def train(args):
                 loss = contractive_loss + sim_loss + discrim_loss + recon_loss
                 loss_lst.append(loss.item())
 
+            if ((epoch == 0)):
+                print("===== INIT =====")
+                print(f"Contractive Loss: {contractive_loss.item():.6f}")
+                if (args.model_type == "method"):
+                    print(f"Sim Loss: {sim_loss.item():.6f}")
+                    print(f"Discriminator Loss: {discrim_loss.item():.6f}")
+                    print(f"Reconstruction Loss: {recon_loss.item():.6f}")
+                print("===========================") 
+
             # backward
             optimizer.zero_grad()
             scaler.scale(loss).backward()
