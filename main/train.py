@@ -46,7 +46,7 @@ def args():
     # hp
     parser.add_argument("--hp_contrastive", type=float)
     parser.add_argument("--hp_sim", type=float)
-    parser.add_argument("--hp_reverse_contrastive", type=float)
+    parser.add_argument("--hp_diff", type=float)
     parser.add_argument("--hp_recon", type=float)
     args = parser.parse_args()
     return args
@@ -107,7 +107,8 @@ def train(args):
         model.train()
         contractive_loss_lst = []
         sim_loss_lst = []
-        reverse_contrastive_loss_lst = []
+        c2p_loss_lst = []
+        p2p_loss_lst = []
         recon_loss_lst = []
         loss_lst = []
 
@@ -129,13 +130,14 @@ def train(args):
             if (args.model_type == "clap"):
                 contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
             elif (args.model_type == "method"):
-                contractive_loss, sim_loss, reverse_contrastive_loss, recon_text_loss, recon_audio_loss  =  criterion.compute_loss(
-                                                                                                                text_embedding, audio_embedding,
-                                                                                                                common_text, common_audio,
-                                                                                                                private_text, private_audio,
-                                                                                                                recon_text, recon_audio
-                                                                                                            )
+                contractive_loss, sim_loss, c2p_text_loss, c2p_audio_loss, p2p_loss, recon_text_loss, recon_audio_loss  =   criterion.compute_loss(
+                                                                                                                                text_embedding, audio_embedding,
+                                                                                                                                common_text, common_audio,
+                                                                                                                                private_text, private_audio,
+                                                                                                                                recon_text, recon_audio
+                                                                                                                            )
                 recon_loss = (recon_text_loss + recon_audio_loss) / 2
+                c2p_loss = (c2p_text_loss + c2p_audio_loss) / 2
 
             # recode loss
             contractive_loss = args.hp_contrastive * contractive_loss
@@ -146,12 +148,14 @@ def train(args):
             elif (args.model_type == "method"):
                 sim_loss = args.hp_sim * sim_loss
                 sim_loss_lst.append(sim_loss.item())
-                reverse_contrastive_loss = args.hp_reverse_contrastive * reverse_contrastive_loss
-                reverse_contrastive_loss_lst.append(reverse_contrastive_loss.item())
+                c2p_loss = args.hp_diff * c2p_loss
+                c2p_loss_lst.append(c2p_loss.item())
+                p2p_loss = args.hp_diff * p2p_loss
+                p2p_loss_lst.append(p2p_loss.item())
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
                 # 全体loss
-                loss = contractive_loss + sim_loss + reverse_contrastive_loss + recon_loss
+                loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
             if ((epoch == 0)):
@@ -159,7 +163,8 @@ def train(args):
                 print(f"Contractive Loss: {contractive_loss.item():.6f}")
                 if (args.model_type == "method"):
                     print(f"Sim Loss: {sim_loss.item():.6f}")
-                    print(f"Reverse Contrastive Loss: {reverse_contrastive_loss.item():.6f}")
+                    print(f"C2P Loss: {c2p_loss.item():.6f}")
+                    print(f"P2P Loss: {p2p_loss.item():.6f}")
                     print(f"Reconstruction Loss: {recon_loss.item():.6f}")
                 print("===========================") 
 
@@ -180,9 +185,12 @@ def train(args):
             epoch_sim_loss = sum(sim_loss_lst) / len(sim_loss_lst)
             writer.add_scalars('Loss/Train/Epoch/sim_Losses', {'Sim': epoch_sim_loss}, epoch)
             print(f"Sim: {epoch_sim_loss:.6f}")
-            epoch_reverse_contrastive_loss = sum(reverse_contrastive_loss_lst) / len(reverse_contrastive_loss_lst)      
-            writer.add_scalars('Loss/Train/Epoch/reverse_contrastive_Losses', {'Reverse Contrastive': epoch_reverse_contrastive_loss}, epoch)
-            print(f"Reverse Contrastive: {epoch_reverse_contrastive_loss:.6f}")
+            epoch_c2p_loss = sum(c2p_loss_lst) / len(c2p_loss_lst)      
+            writer.add_scalars('Loss/Train/Epoch/c2p_Losses', {'C2P': epoch_c2p_loss}, epoch)
+            print(f"C2P: {epoch_c2p_loss:.6f}")
+            epoch_p2p_loss = sum(p2p_loss_lst) / len(p2p_loss_lst)      
+            writer.add_scalars('Loss/Train/Epoch/p2p_Losses', {'P2P': epoch_p2p_loss}, epoch)
+            print(f"P2P: {epoch_p2p_loss:.6f}")
             epoch_recon_loss = sum(recon_loss_lst) / len(recon_loss_lst)
             writer.add_scalars('Loss/Train/Epoch/recon_Losses', {'Reconstruction': epoch_recon_loss}, epoch)
             print(f"Reconstruction: {epoch_recon_loss:.6f}")

@@ -13,6 +13,6 @@ python -u train.py \
     --dropout_rate 0.1 \
     --hp_contrastive 0.2 \
     --hp_sim 0.1 \
-    --hp_reverse_contrastive 0.1 \
+    --hp_diff 0.5 \
     --hp_recon 2.0 \
     2>&1 | tee "logs/train/${model_type}_${dataset}/train.log"
