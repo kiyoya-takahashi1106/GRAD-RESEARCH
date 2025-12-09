@@ -46,7 +46,7 @@ class Clap(nn.Module):
         text_embedding = self.text_projection(text_embedding)
         audio_embedding = self.audio_projection(audio_embedding)
 
-        return text_embedding, audio_embedding, 
+        return text_embedding, audio_embedding
 
 
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
