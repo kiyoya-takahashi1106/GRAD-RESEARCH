@@ -33,7 +33,7 @@ class AudioCapsDataset(Dataset):
                     print(f"[WARN] skip ({split}): {audio_filename} -> {audio_path} (not found)")
                     continue
 
-                self.samples.append((caption, audio_path))
+                self.samples.append((split, caption, audio_path))
 
 
     def __len__(self) -> int:
@@ -41,7 +41,7 @@ class AudioCapsDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        caption, path = self.samples[idx]
+        split, caption, path = self.samples[idx]
 
         TARGET_SR = 16000
         wav, sr = torchaudio.load(path)
@@ -51,4 +51,4 @@ class AudioCapsDataset(Dataset):
             wav = torchaudio.functional.resample(wav, sr, TARGET_SR)
         wav = wav.squeeze(0)
 
-        return caption, wav
+        return split, caption, wav

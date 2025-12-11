@@ -66,7 +66,7 @@ def val(args):
     # ===== 2. 各音声サンプルの zero-shot 推論 =====
     y_preds, y_labels = [], []
 
-    for i in tqdm(range(len(test_dataset)), desc="Zero-shot eval"):
+    for i in range(len(test_dataset)):
         audio_x, attn_mask, one_hot_target = test_dataset[i]
 
         audio_x = audio_x.to(device)

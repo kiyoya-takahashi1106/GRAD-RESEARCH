@@ -8,8 +8,8 @@ python -u train.py \
     --seed 42 \
     --dataset ${dataset} \
     --lr 1e-3 \
-    --epochs 40 \
-    --batch_size 50 \
+    --epochs 100 \
+    --batch_size 1000 \
     --dropout_rate 0.1 \
     --hp_contrastive 0.2 \
     --hp_sim 0.1 \

@@ -30,8 +30,11 @@ def random_crop_or_pad(wav: torch.Tensor, target_len: int = 16000 * 5):
 
 
 def collate_fn(batch, text_tokenizer, audio_processor):
+    # ==== Split ====
+    splits = [sample[0] for sample in batch]
+
     # ===== Text =====
-    texts = [sample[0] for sample in batch]
+    texts = [sample[1] for sample in batch]
 
     tokenizer_output = text_tokenizer(
         texts,
@@ -43,7 +46,7 @@ def collate_fn(batch, text_tokenizer, audio_processor):
     text_attn_mask = tokenizer_output["attention_mask"]     # (B, L_text)
 
     # ===== Audio =====
-    raw_audios = [sample[1] for sample in batch]  # list of Tensor(T,)
+    raw_audios = [sample[2] for sample in batch]  # list of Tensor(T,)
 
     cropped_padded = []
     audio_masks = []
@@ -67,4 +70,4 @@ def collate_fn(batch, text_tokenizer, audio_processor):
     audio_input_values = processor_output["input_values"]
     audio_input_values = audio_input_values.squeeze(0)
 
-    return text_input_ids, text_attn_mask, audio_input_values, audio_attn_mask
+    return splits, text_input_ids, text_attn_mask, audio_input_values, audio_attn_mask

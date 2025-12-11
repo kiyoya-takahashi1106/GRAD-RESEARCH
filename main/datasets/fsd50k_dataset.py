@@ -47,7 +47,7 @@ class FSD50KDataset(Dataset):
                 print(f"[WARN] skip ({split}): {data_id} -> {audio_path} (not found)")
                 continue
 
-            self.samples.append((caption, audio_path))
+            self.samples.append((split, caption, audio_path))
 
 
     def __len__(self) -> int:
@@ -55,7 +55,7 @@ class FSD50KDataset(Dataset):
 
 
     def __getitem__(self, idx):
-        caption, path = self.samples[idx]
+        split, caption, path = self.samples[idx]
 
         TARGET_SR = 16000
         wav, sr = torchaudio.load(path)
@@ -65,4 +65,4 @@ class FSD50KDataset(Dataset):
             wav = torchaudio.functional.resample(wav, sr, TARGET_SR)
         wav = wav.squeeze(0)
 
-        return caption, wav
+        return split, caption, wav

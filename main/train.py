@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.utils.data import ConcatDataset
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torch.cuda.amp import autocast, GradScaler
@@ -19,11 +20,8 @@ from functools import partial
 
 from model.clap import Clap
 from model.method_model import MethodModel
-from transformers import RobertaTokenizerFast, Wav2Vec2Processor
 
-from datasets.audiocaps_dataset import AudioCapsDataset
-from datasets.fsd50k_dataset import FSD50KDataset
-from datasets.mix_dataset import MixDataset
+from datasets.fea_dataset import FeaDataset
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
 sys.path.insert(0, PROJECT_ROOT)
@@ -31,7 +29,6 @@ from utils.utility import set_seed
 from utils.utility import compute_contrastive_similarity
 from utils.loss import ClapCriterion
 from utils.loss import Criterion
-from utils.collate_fn import collate_fn
 
 
 def args():
@@ -62,8 +59,6 @@ def train(args):
         model = MethodModel(
             dropout_rate=args.dropout_rate
         )
-    text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-    audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     
     # TensorBoard Writer設定
     os.makedirs(f"runs/train/{args.model_type}_{args.dataset}", exist_ok=True)
@@ -79,17 +74,14 @@ def train(args):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
 
     # データセットとデータローダーの準備
-    if (args.dataset == "audiocaps"):
-        train_dataset = AudioCapsDataset(split='train')
-        test_dataset = AudioCapsDataset(split='val')
-    elif (args.dataset == "fsd50k"):
-        train_dataset = FSD50KDataset(split='train')
-        test_dataset = FSD50KDataset(split='val')
+    if (args.dataset == "audiocaps"  or  args.dataset == "fsd50k"):
+        train_dataset = FeaDataset(dataset=args.dataset, split='train')
+        test_dataset = FeaDataset(dataset=args.dataset, split='val')
     elif (args.dataset == "mix"):
-        train_dataset = MixDataset(split='train')
-        test_dataset = MixDataset(split='val')
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
+        train_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='train'), FeaDataset(dataset="fsd50k", split='train')])
+        test_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='val'), FeaDataset(dataset="fsd50k", split='val')])
+    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
 
     print("train dataset size:", len(train_dataset))
     print("test dataset size:", len(test_dataset))
@@ -112,19 +104,19 @@ def train(args):
         recon_loss_lst = []
         loss_lst = []
 
-        train_bar = tqdm(train_dataloader, desc=f"Train Epoch {epoch+1}/{args.epochs}", leave=False)
-        for i, batch in enumerate(train_bar):
-            text_x, text_attn_mask, audio_x, audio_attn_mask = batch
-            text_x = text_x.to(device)       
-            text_attn_mask = text_attn_mask.to(device)
-            audio_x = audio_x.to(device) 
-            audio_attn_mask = audio_attn_mask.to(device)
+        # train_bar = tqdm(train_dataloader, desc=f"Train Epoch {epoch+1}/{args.epochs}", leave=False)
+        for i, batch in enumerate(train_dataloader):
+            text_embedding, audio_embedding = batch
+            text_embedding = text_embedding.to(device)       
+            audio_embedding = audio_embedding.to(device)
+            text_embedding = torch.squeeze(text_embedding, dim=1)
+            audio_embedding = torch.squeeze(audio_embedding, dim=1)
 
             # forward
             if (args.model_type == "clap"):      
-                text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                text_embedding, audio_embedding = model(text_embedding, audio_embedding)
             elif (args.model_type == "method"):                         
-                text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
 
             # compute loss
             if (args.model_type == "clap"):
@@ -155,18 +147,19 @@ def train(args):
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
                 # 全体loss
-                loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+                # loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+                loss = contractive_loss + sim_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
-            if ((epoch == 0)):
-                print("===== INIT =====")
-                print(f"Contractive Loss: {contractive_loss.item():.6f}")
-                if (args.model_type == "method"):
-                    print(f"Sim Loss: {sim_loss.item():.6f}")
-                    print(f"C2P Loss: {c2p_loss.item():.6f}")
-                    print(f"P2P Loss: {p2p_loss.item():.6f}")
-                    print(f"Reconstruction Loss: {recon_loss.item():.6f}")
-                print("===========================") 
+            # if ((epoch == 0)):
+            #     print("===== INIT =====")
+            #     print(f"Contractive Loss: {contractive_loss.item():.6f}")
+            #     if (args.model_type == "method"):
+            #         print(f"Sim Loss: {sim_loss.item():.6f}")
+            #         print(f"C2P Loss: {c2p_loss.item():.6f}")
+            #         print(f"P2P Loss: {p2p_loss.item():.6f}")
+            #         print(f"Reconstruction Loss: {recon_loss.item():.6f}")
+            #     print("===========================") 
 
             # backward
             optimizer.zero_grad()
@@ -204,18 +197,18 @@ def train(args):
         test_contractive_lst = []
 
         with torch.no_grad():
-            test_bar = tqdm(test_dataloader, desc=f"Test Epoch {epoch+1}/{args.epochs}", leave=False)
-            for batch in test_bar:
-                text_x, text_attn_mask, audio_x, audio_attn_mask = batch
-                text_x = text_x.to(device)       
-                text_attn_mask = text_attn_mask.to(device)
-                audio_x = audio_x.to(device)                            
-                audio_attn_mask = audio_attn_mask.to(device)
+            # test_bar = tqdm(test_dataloader, desc=f"Test Epoch {epoch+1}/{args.epochs}", leave=False)
+            for batch in test_dataloader:
+                text_embedding, audio_embedding = batch
+                text_embedding = text_embedding.to(device)       
+                audio_embedding = audio_embedding.to(device)
+                text_embedding = torch.squeeze(text_embedding, dim=1)
+                audio_embedding = torch.squeeze(audio_embedding, dim=1)
 
                 if (args.model_type == "clap"):
-                    text_embedding, audio_embedding = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                    text_embedding, audio_embedding = model(text_embedding, audio_embedding)   
                 elif (args.model_type == "method"):
-                    _, _, common_text, common_audio, _, _, _, _ = model(text_x, text_attn_mask, audio_x, audio_attn_mask)
+                    common_text, common_audio, _, _, _, _ = model(text_embedding, audio_embedding)
                     text_embedding = common_text
                     audio_embedding = common_audio
 
