@@ -147,19 +147,19 @@ def train(args):
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
                 # 全体loss
-                # loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
-                loss = contractive_loss + sim_loss + p2p_loss + recon_loss
+                loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+                # loss = contractive_loss + sim_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
-            # if ((epoch == 0)):
-            #     print("===== INIT =====")
-            #     print(f"Contractive Loss: {contractive_loss.item():.6f}")
-            #     if (args.model_type == "method"):
-            #         print(f"Sim Loss: {sim_loss.item():.6f}")
-            #         print(f"C2P Loss: {c2p_loss.item():.6f}")
-            #         print(f"P2P Loss: {p2p_loss.item():.6f}")
-            #         print(f"Reconstruction Loss: {recon_loss.item():.6f}")
-            #     print("===========================") 
+            if ((epoch == 0)):
+                print("===== INIT =====")
+                print(f"Contractive Loss: {contractive_loss.item():.6f}")
+                if (args.model_type == "method"):
+                    print(f"Sim Loss: {sim_loss.item():.6f}")
+                    print(f"C2P Loss: {c2p_loss.item():.6f}")
+                    print(f"P2P Loss: {p2p_loss.item():.6f}")
+                    print(f"Reconstruction Loss: {recon_loss.item():.6f}")
+                print("===========================") 
 
             # backward
             optimizer.zero_grad()
@@ -226,9 +226,13 @@ def train(args):
             os.makedirs(
                 f"saved_models/train/{args.model_type}_{args.dataset}/", exist_ok=True
             )
+            # best_model_path = (
+            #     f"saved_models/train/{args.model_type}_{args.dataset}/"
+            #     f"epoch{epoch}.pth"
+            # )
             best_model_path = (
                 f"saved_models/train/{args.model_type}_{args.dataset}/"
-                f"epoch{epoch}.pth"
+                f"best.pth"
             )
             torch.save(model.state_dict(), best_model_path)
             print(f"We've saved the new model (Contrastive: {best_contractive:.4f})")
