@@ -21,7 +21,6 @@ class MethodModel(nn.Module):
         # ===== 重み固定 =====
         for param in self.text_encoder.parameters():
             param.requires_grad = False
-
         for param in self.audio_encoder.parameters():
             param.requires_grad = False
 
@@ -46,11 +45,7 @@ class MethodModel(nn.Module):
             print(f"Loaded trained model from {saved_model_path}")
 
 
-    def forward(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
-        # enocode
-        text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
-
+    def forward(self, text_embedding: torch.Tensor, audio_embedding: torch.Tensor):
         # 共通-固有分離
         common_text = self.common_text_linear(text_embedding)
         private_text = self.private_text_linear(text_embedding)
@@ -65,15 +60,16 @@ class MethodModel(nn.Module):
         recon_text = self.recon_text_linear(torch.cat([common_text, private_text], dim=-1))
         recon_audio = self.recon_audio_linear(torch.cat([common_audio, private_audio], dim=-1))
 
-        return text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio
+        return common_text, common_audio, private_text, private_audio, recon_text, recon_audio
     
     
+    # 推論用
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
         text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
         common_text = self.common_text_linear(text_embedding)
         return common_text
     
-
+    # 推論用
     def encode_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
         common_audio = self.common_audio_linear(audio_embedding)

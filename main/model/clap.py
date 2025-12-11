@@ -21,7 +21,6 @@ class Clap(nn.Module):
         # ===== 重み固定 =====
         for param in self.text_encoder.parameters():
             param.requires_grad = False
-
         for param in self.audio_encoder.parameters():
             param.requires_grad = False
 
@@ -37,23 +36,19 @@ class Clap(nn.Module):
             print(f"Loaded trained model from {saved_model_path}")
 
 
-    def forward(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
-        # enocode
-        text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
-
-        # 共通-固有分離
+    def forward(self, text_embedding: torch.Tensor, audio_embedding: torch.Tensor):
+        # 共通空間への射影
         text_embedding = self.text_projection(text_embedding)
         audio_embedding = self.audio_projection(audio_embedding)
 
         return text_embedding, audio_embedding
 
 
+    # 推論用
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
         text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
         text_embedding = self.text_projection(text_embedding)
-        return text_embedding
-    
+        return text_embedding    
 
     def encode_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
