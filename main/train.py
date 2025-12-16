@@ -61,8 +61,8 @@ def train(args):
         )
     
     # TensorBoard Writer設定
-    os.makedirs(f"runs/train/{args.model_type}_{args.dataset}", exist_ok=True)
-    log_dir = os.path.join("runs", f"train/{args.model_type}_{args.dataset}")
+    os.makedirs(f"runs/{args.model_type}_{args.dataset}", exist_ok=True)
+    log_dir = os.path.join("runs", f"{args.model_type}_{args.dataset}")
     writer = SummaryWriter(log_dir=log_dir)
     print(f"TensorBoard logs will be saved to: {log_dir}")
     
