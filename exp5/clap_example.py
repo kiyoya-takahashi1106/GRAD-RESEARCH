@@ -26,7 +26,7 @@ root_path = "../data"
 dataset = ESC50Dataset(root=root_path, download=True)
 
 # Load and initialize CLAP
-clap_model = CLAP(version = '2023', use_cuda=True)
+clap_model = CLAP(version = '2022', use_cuda=True)
 
 # Computing text embeddings
 prompt = 'this is the sound of '
