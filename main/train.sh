@@ -1,6 +1,6 @@
 # ===== TRAINING =====
-model_type="method"
-dataset="audiocaps"
+model_type="method"       # help: "clap", "method" 
+dataset="mix"       # help: "audiocaps", "fsd50k", "clotho", "mix"
 
 mkdir -p logs/train/${model_type}_${dataset}
 
@@ -9,11 +9,11 @@ python -u train.py \
     --seed 42 \
     --dataset ${dataset} \
     --lr 1e-3 \
-    --epochs 100 \
+    --epochs 200 \
     --batch_size 1000 \
     --dropout_rate 0.1 \
     --hp_contrastive 0.2 \
-    --hp_sim 0 \
+    --hp_sim 0.2 \
     --hp_diff 1.0 \
     --hp_recon 2.0 \
     2>&1 | tee "logs/train/${model_type}_${dataset}/train.log"

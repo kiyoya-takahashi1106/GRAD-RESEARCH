@@ -17,6 +17,7 @@ from transformers import Wav2Vec2Model
 
 from datasets.audiocaps_dataset import AudioCapsDataset
 from datasets.fsd50k_dataset import FSD50KDataset
+from datasets.clotho_dataset import ClothoDataset
 from torch.utils.data import DataLoader
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,7 @@ from utils.collate_fn import collate_fn
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=42)
-parser.add_argument("--dataset", type=str, help="audiocaps or fsd50k")
+parser.add_argument("--dataset", type=str, help="audiocaps, fsd50k, clotho")
 parser.add_argument("--batch_size", type=int)
 args = parser.parse_args()
 
@@ -57,6 +58,8 @@ if (args.dataset == "audiocaps"):
     dataset = AudioCapsDataset(split="all")
 elif (args.dataset == "fsd50k"):
     dataset = FSD50KDataset(split="all")
+elif (args.dataset == "clotho"):
+    dataset = ClothoDataset(split="all")
 dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
 
 

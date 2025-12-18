@@ -1,5 +1,5 @@
 seed=42
-dataset="fsd50k"
+dataset="clotho"
 batch_size=100
 
 python -u fea_save.py \

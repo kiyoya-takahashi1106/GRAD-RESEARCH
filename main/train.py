@@ -74,17 +74,17 @@ def train(args):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0)
 
     # データセットとデータローダーの準備
-    if (args.dataset == "audiocaps"  or  args.dataset == "fsd50k"):
+    if (args.dataset == "audiocaps"  or  args.dataset == "fsd50k"  or  args.dataset == "clotho"):
         train_dataset = FeaDataset(dataset=args.dataset, split='train')
-        test_dataset = FeaDataset(dataset=args.dataset, split='val')
+        val_dataset = FeaDataset(dataset=args.dataset, split='val')
     elif (args.dataset == "mix"):
-        train_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='train'), FeaDataset(dataset="fsd50k", split='train')])
-        test_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='val'), FeaDataset(dataset="fsd50k", split='val')])
+        train_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='train'), FeaDataset(dataset="fsd50k", split='train'), FeaDataset(dataset="clotho", split='train')])
+        val_dataset = ConcatDataset([FeaDataset(dataset="audiocaps", split='val'), FeaDataset(dataset="fsd50k", split='val'), FeaDataset(dataset="clotho", split='val')])
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
 
     print("train dataset size:", len(train_dataset))
-    print("test dataset size:", len(test_dataset))
+    print("val dataset size:", len(val_dataset))
 
     if (args.model_type == "clap"):
         criterion = ClapCriterion()
@@ -138,7 +138,7 @@ def train(args):
                 loss = contractive_loss
                 loss_lst.append(loss.item())
             elif (args.model_type == "method"):
-                sim_loss = args.hp_sim * sim_loss
+                sim_loss = args.hp_sim * sim_loss * (epoch+1) / args.epochs
                 sim_loss_lst.append(sim_loss.item())
                 c2p_loss = args.hp_diff * c2p_loss
                 c2p_loss_lst.append(c2p_loss.item())
@@ -151,15 +151,15 @@ def train(args):
                 # loss = contractive_loss + sim_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
-            if ((epoch == 0)):
-                print("===== INIT =====")
-                print(f"Contractive Loss: {contractive_loss.item():.6f}")
-                if (args.model_type == "method"):
-                    print(f"Sim Loss: {sim_loss.item():.6f}")
-                    print(f"C2P Loss: {c2p_loss.item():.6f}")
-                    print(f"P2P Loss: {p2p_loss.item():.6f}")
-                    print(f"Reconstruction Loss: {recon_loss.item():.6f}")
-                print("===========================") 
+            # if ((epoch == 0)):
+            #     print("===== INIT =====")
+            #     print(f"Contractive Loss: {contractive_loss.item():.6f}")
+            #     if (args.model_type == "method"):
+            #         print(f"Sim Loss: {sim_loss.item():.6f}")
+            #         print(f"C2P Loss: {c2p_loss.item():.6f}")
+            #         print(f"P2P Loss: {p2p_loss.item():.6f}")
+            #         print(f"Reconstruction Loss: {recon_loss.item():.6f}")
+            #     print("===========================") 
 
             # backward
             optimizer.zero_grad()
@@ -198,7 +198,7 @@ def train(args):
 
         with torch.no_grad():
             # test_bar = tqdm(test_dataloader, desc=f"Test Epoch {epoch+1}/{args.epochs}", leave=False)
-            for batch in test_dataloader:
+            for batch in val_dataloader:
                 text_embedding, audio_embedding = batch
                 text_embedding = text_embedding.to(device)       
                 audio_embedding = audio_embedding.to(device)
