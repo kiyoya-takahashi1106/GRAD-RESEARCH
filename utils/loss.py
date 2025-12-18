@@ -85,6 +85,20 @@ class Criterion:
         sim_loss = 1.0 - sim
         return sim_loss
 
+        # CKAに基づく類似度損失を計算する
+        # X = common_text - common_text.mean(dim=0, keepdim=True)
+        # Y = common_audio - common_audio.mean(dim=0, keepdim=True)
+        # XT_Y = X.T @ Y
+        # XTX = X.T @ X
+        # YTY = Y.T @ Y
+        # hsic = (XT_Y ** 2).sum()
+        # eps = 1e-8
+        # norm_x = torch.sqrt((XTX ** 2).sum() + eps)
+        # norm_y = torch.sqrt((YTY ** 2).sum() + eps)
+        # cka = hsic / (norm_x * norm_y + eps)
+        # sim_loss = 1.0 - cka
+        # return sim_loss
+
 
     def compute_reverse_contrastive_loss(self, private_text, private_audio):
         """
