@@ -15,7 +15,7 @@ from functools import partial
 from datasets.audiocaps_dataset import AudioCapsDataset
 from datasets.fsd50k_dataset import FSD50KDataset
 from datasets.clotho_dataset import ClothoDataset
-# from datasets.macs_dataset import MACSDataset
+from datasets.macs_dataset import MacsDataset
 from torch.utils.data import DataLoader
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -46,8 +46,8 @@ elif (args.dataset == "fsd50k"):
     dataset = FSD50KDataset(split="all")
 elif (args.dataset == "clotho"):
     dataset = ClothoDataset(split="all")
-# elif (args.dataset == "macs"):
-#     dataset = MACSDataset(split="all")
+elif (args.dataset == "macs"):
+    dataset = MacsDataset(split="all")
 dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
 
 print(f"Dataset: {args.dataset}, #samples: {len(dataset)}")
@@ -72,8 +72,8 @@ with torch.no_grad():
     for batch in train_bar:
         splits, text_x, audio_path = batch
 
-        for i in range(len(text_x)):
-            print(len(text_x[i]), audio_path[i])
+        # for i in range(len(text_x)):
+        #     print(len(text_x[i]), audio_path[i])
 
         text_embedding = clap_model.get_text_embeddings(text_x)
         audio_embedding = clap_model.get_audio_embeddings(audio_path, resample=True)

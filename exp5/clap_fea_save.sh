@@ -1,5 +1,5 @@
 seed=42
-datasets=("fsd50k")
+datasets=("macs")
 batch_size=200
 
 for dataset in "${datasets[@]}"; do
