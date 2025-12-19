@@ -36,7 +36,7 @@ def args():
 def val(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    clap_model = CLAP(version = '2023', use_cuda=True)
+    clap_model = CLAP(version = '2022', use_cuda=True)
     model = Model(
         dropout_rate=args.dropout_rate,
         saved_model_path=args.saved_model_path
