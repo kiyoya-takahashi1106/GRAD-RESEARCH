@@ -78,26 +78,26 @@ class Criterion:
         """
         共通特徴に対して、内積を計算する
         """
-        common_text_norm = F.normalize(common_text, p=2, dim=-1)
-        common_audio_norm = F.normalize(common_audio, p=2, dim=-1)
-        sim = torch.sum(common_text_norm * common_audio_norm, dim=-1)
-        sim = sim.mean()
-        sim_loss = 1.0 - sim
-        return sim_loss
+        # common_text_norm = F.normalize(common_text, p=2, dim=-1)
+        # common_audio_norm = F.normalize(common_audio, p=2, dim=-1)
+        # sim = torch.sum(common_text_norm * common_audio_norm, dim=-1)
+        # sim = sim.mean()
+        # sim_loss = 1.0 - sim
+        # return sim_loss
 
         # CKAに基づく類似度損失を計算する
-        # X = common_text - common_text.mean(dim=0, keepdim=True)
-        # Y = common_audio - common_audio.mean(dim=0, keepdim=True)
-        # XT_Y = X.T @ Y
-        # XTX = X.T @ X
-        # YTY = Y.T @ Y
-        # hsic = (XT_Y ** 2).sum()
-        # eps = 1e-8
-        # norm_x = torch.sqrt((XTX ** 2).sum() + eps)
-        # norm_y = torch.sqrt((YTY ** 2).sum() + eps)
-        # cka = hsic / (norm_x * norm_y + eps)
-        # sim_loss = 1.0 - cka
-        # return sim_loss
+        X = common_text - common_text.mean(dim=0, keepdim=True)
+        Y = common_audio - common_audio.mean(dim=0, keepdim=True)
+        XT_Y = X.T @ Y
+        XTX = X.T @ X
+        YTY = Y.T @ Y
+        hsic = (XT_Y ** 2).sum()
+        eps = 1e-8
+        norm_x = torch.sqrt((XTX ** 2).sum() + eps)
+        norm_y = torch.sqrt((YTY ** 2).sum() + eps)
+        cka = hsic / (norm_x * norm_y + eps)
+        sim_loss = 1.0 - cka
+        return sim_loss
 
 
     def compute_reverse_contrastive_loss(self, private_text, private_audio):
