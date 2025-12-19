@@ -2,7 +2,7 @@
 CLAP ESC-50 TEST
 
 The output:
-ESC50 Accuracy: 93.85%
+ESC50 Accuracy: 0.826%
 """
 
 import torch
