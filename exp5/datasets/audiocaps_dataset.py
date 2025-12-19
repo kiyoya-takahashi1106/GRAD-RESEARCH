@@ -25,11 +25,11 @@ class AudioCapsDataset(Dataset):
                 _, audio_filename, caption, _ = line.strip().split('\t')
                 audio_path = self.root / Path(audio_filename)
 
-              # ここでちゃんとファイルかチェック
+                # ここでちゃんとファイルかチェック
                 if not audio_path.is_file():
                     print(f"[WARN] skip ({split}): {audio_filename} -> {audio_path} (not found)")
                     continue
-
+                
                 self.samples.append((split, caption, str(audio_path)))
 
 
