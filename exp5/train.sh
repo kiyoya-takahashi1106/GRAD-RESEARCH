@@ -7,6 +7,7 @@ python -u train.py \
         --dataset ${dataset} \
         --lr 1e-3 \
         --epochs 50 \
+        --start_sim_epoch 5 \
         --batch_size 256 \
         --dropout_rate 0.1 \
         --hp_contrastive 0.2 \

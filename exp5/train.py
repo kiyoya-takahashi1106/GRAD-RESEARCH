@@ -35,6 +35,7 @@ def args():
     parser.add_argument("--dataset", type=str, help="mix")
     parser.add_argument("--lr", type=float)
     parser.add_argument("--epochs", type=int)
+    parser.add_argument("--start_sim_epoch", type=int, default=0)
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--dropout_rate", type=float)
     # hp
@@ -137,10 +138,10 @@ def train(args):
             recon_loss_lst.append(recon_loss.item())
 
             # 全体loss
-            # if (epoch < 3):
-            #     loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
-            # else:
-            loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+            if (epoch < args.start_sim_epoch):
+                loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
+            else:
+                loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
             loss_lst.append(loss.item())
 
             # if ((epoch == 0)):
