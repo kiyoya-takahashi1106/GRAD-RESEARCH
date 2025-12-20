@@ -11,13 +11,14 @@ import numpy as np
 import argparse
 from functools import partial
 
-from transformers import RobertaTokenizerFast, Wav2Vec2Processor
+from transformers import RobertaTokenizerFast, Wav2Vec2Processor, Wav2Vec2FeatureExtractor
 from transformers import AutoModel
 from transformers import Wav2Vec2Model
 
 from datasets.audiocaps_dataset import AudioCapsDataset
 from datasets.fsd50k_dataset import FSD50KDataset
 from datasets.clotho_dataset import ClothoDataset
+from datasets.macs_dataset import MacsDataset
 from torch.utils.data import DataLoader
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -29,8 +30,9 @@ from utils.collate_fn import collate_fn
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=42)
-parser.add_argument("--dataset", type=str, help="audiocaps, fsd50k, clotho")
+parser.add_argument("--dataset", type=str, help="audiocaps, fsd50k, clotho, macs")
 parser.add_argument("--batch_size", type=int)
+parser.add_argument("--dim_num", type=int, default=768, help="dimension of features to save: 768 or 1024")
 args = parser.parse_args()
 
 set_seed(args.seed)
@@ -40,12 +42,21 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 # Load model
-text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False).to(device)
-audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
+if (args.dim_num == 768):
+    print("Using 768-dim features")
+    text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False).to(device)
+    audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
+    text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+    audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+elif (args.dim_num == 1024):
+    print("Using 1024-dim features")
+    text_encoder = AutoModel.from_pretrained("roberta-large", add_pooling_layer=False).to(device)
+    audio_encoder = AutoModel.from_pretrained("microsoft/wavlm-large").to(device)
+    text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
+    audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-large")
+
 text_encoder.eval()
 audio_encoder.eval()
-text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
 
 # freeze parameters
 for param in text_encoder.parameters():
@@ -60,6 +71,8 @@ elif (args.dataset == "fsd50k"):
     dataset = FSD50KDataset(split="all")
 elif (args.dataset == "clotho"):
     dataset = ClothoDataset(split="all")
+elif (args.dataset == "macs"):
+    dataset = MacsDataset(split="all")
 dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, collate_fn=partial(collate_fn, text_tokenizer=text_tokenizer, audio_processor=audio_processor))
 
 
@@ -100,6 +113,6 @@ with torch.no_grad():
             )
 
 # Save fea
-save_path = f"../data/{args.dataset}/fea.pt"
+save_path = f"../data/{args.dataset}/fea{args.dim_num}.pt"
 torch.save(fea_dct, save_path)
 print(f"Saved fea to {save_path}")

@@ -18,9 +18,10 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 
+from transformers import RobertaTokenizerFast, Wav2Vec2Processor, Wav2Vec2FeatureExtractor
+
 from model.clap import Clap
 from model.method_model import MethodModel
-from transformers import RobertaTokenizerFast, Wav2Vec2Processor
 
 from datasets.esc50_dataset import ESC50Dataset
 
@@ -29,6 +30,7 @@ def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", type=str)
     parser.add_argument("--dataset", type=str)
+    parser.add_argument("--hidden_dim", type=int)
     parser.add_argument("--dropout_rate", type=float)
     parser.add_argument("--saved_model_path", type=str)
     args = parser.parse_args()
@@ -40,19 +42,27 @@ def val(args):
 
     if (args.model_type == "clap"):
         model = Clap(
+            hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
             saved_model_path=args.saved_model_path
         )
     elif (args.model_type == "method"):
         model = MethodModel(
+            hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
             saved_model_path=args.saved_model_path
         )
         
     model = model.to(device)
 
-    text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-    audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+    # Load tokenizers and processors
+    if (args.hidden_dim == 768):
+        text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
+        audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+    elif (args.hidden_dim == 1024):
+        text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
+        audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-large")
+
     test_dataset = ESC50Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
 
     # ===== 1. クラス側テキストの埋め込み =====

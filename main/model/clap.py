@@ -11,12 +11,16 @@ from transformers import Wav2Vec2Model
 
 
 class Clap(nn.Module):
-    def __init__(self, dropout_rate: float, hidden_dim: int = 768, saved_model_path: str = None):
+    def __init__(self, hidden_dim: int, dropout_rate: float, saved_model_path: str = None):
         super(Clap, self).__init__()        
 
         # encoder
-        self.text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False)
-        self.audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base")
+        if (hidden_dim == 768):
+            self.text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False)
+            self.audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base")
+        elif (hidden_dim == 1024):
+            self.text_encoder = AutoModel.from_pretrained("roberta-large", add_pooling_layer=False)
+            self.audio_encoder = AutoModel.from_pretrained("microsoft/wavlm-large")
 
         # ===== 重み固定 =====
         for param in self.text_encoder.parameters():
