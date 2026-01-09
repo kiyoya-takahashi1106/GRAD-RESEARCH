@@ -31,8 +31,8 @@ class ClapCriterion:
     
 
 class Criterion:
-    def __init__(self):
-        pass
+    def __init__(self, sim_loss_type):
+        self.sim_loss_type = sim_loss_type
 
     def compute_loss(self, text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio):
         """
@@ -42,7 +42,10 @@ class Criterion:
         Reconstruction loss *2
         """
         contractive_loss = self.compute_contrastive_loss(common_text, common_audio)
-        sim_loss = self.compute_sim_loss(common_text, common_audio)
+        if (self.sim_loss_type == "cos"):
+            sim_loss = self.compute_sim_cos_loss(common_text, common_audio)
+        elif (self.sim_loss_type == "cka"):
+            sim_loss = self.compute_sim_cka_loss(common_text, common_audio)
         c2p_text_loss = self.compute_cka_loss(common_text, private_text)
         c2p_audio_loss = self.compute_cka_loss(common_audio, private_audio)
         p2p_loss = self.compute_cka_loss(private_text, private_audio)
@@ -74,7 +77,7 @@ class Criterion:
         return loss
 
 
-    def compute_sim_loss(self, common_text, common_audio):
+    def compute_sim_cos_loss(self, common_text, common_audio):
         """
         共通特徴に対して、内積を計算する
         """
@@ -84,20 +87,24 @@ class Criterion:
         sim = sim.mean()
         sim_loss = 1.0 - sim
         return sim_loss
-
-        # CKAに基づく類似度損失を計算する
-        # X = common_text - common_text.mean(dim=0, keepdim=True)
-        # Y = common_audio - common_audio.mean(dim=0, keepdim=True)
-        # XT_Y = X.T @ Y
-        # XTX = X.T @ X
-        # YTY = Y.T @ Y
-        # hsic = (XT_Y ** 2).sum()
-        # eps = 1e-8
-        # norm_x = torch.sqrt((XTX ** 2).sum() + eps)
-        # norm_y = torch.sqrt((YTY ** 2).sum() + eps)
-        # cka = hsic / (norm_x * norm_y + eps)
-        # sim_loss = 1.0 - cka
-        # return sim_loss
+    
+    
+    def compute_sim_cka_loss(self, common_text, common_audio):
+        """
+        CKAに基づく類似度損失を計算する
+        """
+        X = common_text - common_text.mean(dim=0, keepdim=True)
+        Y = common_audio - common_audio.mean(dim=0, keepdim=True)
+        XT_Y = X.T @ Y
+        XTX = X.T @ X
+        YTY = Y.T @ Y
+        hsic = (XT_Y ** 2).sum()
+        eps = 1e-8
+        norm_x = torch.sqrt((XTX ** 2).sum() + eps)
+        norm_y = torch.sqrt((YTY ** 2).sum() + eps)
+        cka = hsic / (norm_x * norm_y + eps)
+        sim_loss = 1.0 - cka
+        return sim_loss
 
 
     def compute_reverse_contrastive_loss(self, private_text, private_audio):
