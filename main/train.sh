@@ -1,7 +1,7 @@
 # ===== TRAINING =====
-model_type="clap"   # help: "clap", "method" 
-dataset="mix"   # help: "audiocaps", "fsd50k", "clotho", "macs", "mix"
-hidden_dim=768   # 768 or 1024
+model_type="method"   # help: "clap", "method" 
+dataset="mix"   # help: "audiocaps", "fsd50k", "clotho",  "mix"
+hidden_dim=1024   # 768 or 1024
 
 mkdir -p logs/train_${hidden_dim}/${model_type}_${dataset}
 
@@ -10,8 +10,8 @@ python -u train.py \
     --seed 42 \
     --dataset ${dataset} \
     --lr 1e-3 \
-    --epochs 200 \
-    --batch_size 256 \
+    --epochs 40 \
+    --batch_size 1000 \
     --hidden_dim ${hidden_dim} \
     --dropout_rate 0.1 \
     --hp_contrastive 0.2 \

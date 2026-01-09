@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--dataset", type=str, help="audiocaps, fsd50k, clotho, macs")
 parser.add_argument("--batch_size", type=int)
-parser.add_argument("--dim_num", type=int, default=768, help="dimension of features to save: 768 or 1024")
+parser.add_argument("--hidden_dim", type=int, default=768, help="dimension of features to save: 768 or 1024")
 args = parser.parse_args()
 
 set_seed(args.seed)
@@ -42,13 +42,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 # Load model
-if (args.dim_num == 768):
+if (args.hidden_dim == 768):
     print("Using 768-dim features")
     text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False).to(device)
     audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
     text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
     audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
-elif (args.dim_num == 1024):
+elif (args.hidden_dim == 1024):
     print("Using 1024-dim features")
     text_encoder = AutoModel.from_pretrained("roberta-large", add_pooling_layer=False).to(device)
     audio_encoder = AutoModel.from_pretrained("microsoft/wavlm-large").to(device)
@@ -113,6 +113,6 @@ with torch.no_grad():
             )
 
 # Save fea
-save_path = f"../data/{args.dataset}/fea{args.dim_num}.pt"
+save_path = f"../data/{args.dataset}/fea{args.hidden_dim}.pt"
 torch.save(fea_dct, save_path)
 print(f"Saved fea to {save_path}")
