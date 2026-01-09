@@ -149,7 +149,8 @@ def train(args):
                 loss = contractive_loss
                 loss_lst.append(loss.item())
             elif (args.model_type == "method"):
-                sim_loss = args.hp_sim * sim_loss * (epoch+1) / args.epochs
+                sim_loss = args.hp_sim * sim_loss
+                sim_loss2 = sim_loss * (epoch+1) / args.epochs
                 sim_loss_lst.append(sim_loss.item())
                 c2p_loss = args.hp_cp_diff * c2p_loss
                 c2p_loss_lst.append(c2p_loss.item())
@@ -161,7 +162,7 @@ def train(args):
                 if (epoch < 5):
                     loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
                 else:
-                    loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+                    loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
             # if ((epoch == 0)):
