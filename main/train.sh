@@ -1,5 +1,5 @@
 # ===== TRAINING =====
-model_type="clap"   # help: "clap", "method" 
+model_type="method"   # help: "clap", "method" 
 dataset="mix"   # help: "audiocaps", "fsd50k", "clotho",  "mix"
 hidden_dim=768   # 768 or 1024
 
@@ -10,10 +10,11 @@ python -u train.py \
     --seed 42 \
     --dataset ${dataset} \
     --lr 1e-3 \
-    --epochs 1000 \
+    --epochs 40 \
     --batch_size 256 \
     --hidden_dim ${hidden_dim} \
     --dropout_rate 0.1 \
+    --sim_loss_type "cka"\
     --hp_contrastive 0.2 \
     --hp_sim 0.2 \
     --hp_cp_diff 0.0 \

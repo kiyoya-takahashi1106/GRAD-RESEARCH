@@ -41,6 +41,7 @@ def args():
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--hidden_dim", type=int, default=768)
     parser.add_argument("--dropout_rate", type=float)
+    parser.add_argument("--sim_loss_type", type=str, help="cos or cka")
     # hp
     parser.add_argument("--hp_contrastive", type=float)
     parser.add_argument("--hp_sim", type=float)
@@ -100,7 +101,7 @@ def train(args):
     if (args.model_type == "clap"):
         criterion = ClapCriterion()
     elif (args.model_type == "method"):
-        criterion = Criterion()
+        criterion = Criterion(args.sim_loss_type)
 
     best_contractive = float('inf')
 
@@ -149,8 +150,11 @@ def train(args):
                 loss = contractive_loss
                 loss_lst.append(loss.item())
             elif (args.model_type == "method"):
-                sim_loss = args.hp_sim * sim_loss
-                sim_loss2 = sim_loss * (epoch+1) / args.epochs
+                if (args.sim_loss_type == "cos"):
+                    sim_loss = args.hp_sim * sim_loss
+                    sim_loss2 = sim_loss * (epoch+1) / args.epochs
+                elif (args.sim_loss_type == "cka"):
+                    sim_loss = args.hp_sim * sim_loss
                 sim_loss_lst.append(sim_loss.item())
                 c2p_loss = args.hp_cp_diff * c2p_loss
                 c2p_loss_lst.append(c2p_loss.item())
@@ -158,11 +162,15 @@ def train(args):
                 p2p_loss_lst.append(p2p_loss.item())
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
+
                 # 全体loss
-                if (epoch < 5):
-                    loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
-                else:
-                    loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
+                if (args.sim_loss_type == "cos"):
+                    if (epoch < 5):
+                        loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
+                    else:
+                        loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
+                elif (args.sim_loss_type == "cka"):
+                    loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
 
             # if ((epoch == 0)):
@@ -237,9 +245,6 @@ def train(args):
         # モデル保存
         if (epoch_test_contractive < best_contractive):
             best_contractive = epoch_test_contractive
-            os.makedirs(
-                f"saved_models/{args.hidden_dim}/{args.model_type}_{args.dataset}/", exist_ok=True
-            )
             # best_model_path = (
             #     f"saved_models/train/{args.model_type}_{args.dataset}/"
             #     f"epoch{epoch}.pth"
