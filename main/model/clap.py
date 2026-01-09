@@ -17,10 +17,10 @@ class Clap(nn.Module):
         # encoder
         if (hidden_dim == 768):
             self.text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False)
-            self.audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base")
+            self.audio_encoder = Wav2Vec2Model.from_pretrained("ALM/wav2vec2-base-audioset")
         elif (hidden_dim == 1024):
             self.text_encoder = AutoModel.from_pretrained("roberta-large", add_pooling_layer=False)
-            self.audio_encoder = AutoModel.from_pretrained("microsoft/wavlm-large")
+            self.audio_encoder = AutoModel.from_pretrained("ALM/wav2vec2-large-audioset")
 
         # ===== 重み固定 =====
         for param in self.text_encoder.parameters():

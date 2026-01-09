@@ -58,10 +58,10 @@ def val(args):
     # Load tokenizers and processors
     if (args.hidden_dim == 768):
         text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-        audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+        audio_processor = Wav2Vec2Processor.from_pretrained("ALM/wav2vec2-base-audioset")
     elif (args.hidden_dim == 1024):
         text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
-        audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-large")
+        audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("ALM/wav2vec2-large-audioset")
 
     test_dataset = ESC50Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
 

@@ -1,6 +1,6 @@
 seed=42
 datasets=("macs")
-batch_size=100
+batch_size=120
 hidden_dim=768   # 768 or 1024
 
 for dataset in "${datasets[@]}"; do

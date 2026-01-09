@@ -66,7 +66,7 @@ class FeaDataset(Dataset):
 
     def get_feature(self, dataset: str, temp_split: str, hidden_dim: int):
         # ❶ ここで一度だけ埋め込みファイルを読み込む
-        fea_path = self.root / self.dataset / f"fea{hidden_dim}.pt"
+        fea_path = self.root / self.dataset / f"fea{hidden_dim}_audioset.pt"
         file_content = torch.load(fea_path, map_location="cpu")
 
         # ❷ サンプルをまとめて self.samples に展開

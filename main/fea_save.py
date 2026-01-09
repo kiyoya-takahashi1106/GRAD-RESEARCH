@@ -45,15 +45,15 @@ print("Using device:", device)
 if (args.hidden_dim == 768):
     print("Using 768-dim features")
     text_encoder = AutoModel.from_pretrained("roberta-base", add_pooling_layer=False).to(device)
-    audio_encoder = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
+    audio_encoder = Wav2Vec2Model.from_pretrained("ALM/wav2vec2-base-audioset").to(device)
     text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-base")
-    audio_processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+    audio_processor = Wav2Vec2Processor.from_pretrained("ALM/wav2vec2-base-audioset")
 elif (args.hidden_dim == 1024):
     print("Using 1024-dim features")
     text_encoder = AutoModel.from_pretrained("roberta-large", add_pooling_layer=False).to(device)
-    audio_encoder = AutoModel.from_pretrained("microsoft/wavlm-large").to(device)
+    audio_encoder = AutoModel.from_pretrained("ALM/wav2vec2-large-audioset").to(device)
     text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
-    audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-large")
+    audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("ALM/wav2vec2-large-audioset")
 
 text_encoder.eval()
 audio_encoder.eval()
@@ -113,6 +113,6 @@ with torch.no_grad():
             )
 
 # Save fea
-save_path = f"../data/{args.dataset}/fea{args.hidden_dim}.pt"
+save_path = f"../data/{args.dataset}/fea{args.hidden_dim}_audioset.pt"
 torch.save(fea_dct, save_path)
 print(f"Saved fea to {save_path}")
