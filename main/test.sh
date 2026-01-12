@@ -1,14 +1,18 @@
 model_type="method"
 training_dataset="mix"
 dataset="esc50"
-hidden_dim=1024   # 768 or 1024
+hidden_dim=768   # 768 or 1024
 
 mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
 
-python -u test.py \
+seeds=(41 42 43)
+
+for seed in "${seeds[@]}"; do
+    python -u test.py \
         --model_type ${model_type} \
         --dataset ${dataset} \
         --hidden_dim ${hidden_dim} \
         --dropout_rate 0.1 \
-        --saved_model_path "./saved_models/train/${model_type}_${training_dataset}/epoch36.pth" \
-        2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}.log"
+        --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
+        2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log"
+done

@@ -66,8 +66,8 @@ def train(args):
         )
     
     # TensorBoard Writer設定
-    os.makedirs(f"runs/{args.hidden_dim}/{args.model_type}_{args.dataset}", exist_ok=True)
-    log_dir = os.path.join("runs", f"{args.hidden_dim}", f"{args.model_type}_{args.dataset}")
+    os.makedirs(f"runs/{args.hidden_dim}/{args.model_type}_{args.dataset}_seed{args.seed}", exist_ok=True)
+    log_dir = os.path.join("runs", f"{args.hidden_dim}", f"{args.model_type}_{args.dataset}_seed{args.seed}")
     writer = SummaryWriter(log_dir=log_dir)
     print(f"TensorBoard logs will be saved to: {log_dir}")
     
@@ -123,7 +123,7 @@ def train(args):
             audio_embedding = audio_embedding.to(device)
             text_embedding = torch.squeeze(text_embedding, dim=1)
             audio_embedding = torch.squeeze(audio_embedding, dim=1)
-
+        
             # forward
             if (args.model_type == "clap"):      
                 text_embedding, audio_embedding = model(text_embedding, audio_embedding)
@@ -267,17 +267,14 @@ def train(args):
         writer.add_scalars('Loss/Val', {'val_loss': epoch_val_loss}, epoch)
         print(f"Val Loss: {epoch_val_loss:.6f}")
         
+        
         # モデル保存
         # if (epoch == args.epochs - 1):
         if (epoch_val_loss <= best_val_loss):
             best_val_loss = epoch_val_loss
-            # best_model_path = (
-            #     f"saved_models/train/{args.model_type}_{args.dataset}/"
-            #     f"epoch{epoch}.pth"
-            # )
             best_model_path = (
                 f"saved_models/{args.hidden_dim}/{args.model_type}_{args.dataset}/"
-                f"best.pth"
+                f"best{args.seed}.pth"
             )
             torch.save(model.state_dict(), best_model_path)
             print(f"We've saved the new model (Val Loss: {best_val_loss:.4f})")
