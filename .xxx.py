@@ -1,13 +1,16 @@
-import torch
+import statistics
 
-datas = ["audiocaps", "fsd50k", "clotho", "macs"]
+# Get three numbers from user input
+num1 = 0.4732
+num2 = 0.4766
+num3 = 0.4782
 
-for data in datas:
-    print(data)
-    fea_path = str(f"./data/{data}/clap_fea.pt")
-    file_content = torch.load(fea_path, map_location="cpu")
-    
-    for split in file_content.keys():
-        print(f"  {split}: {len(file_content[split])}")
-    
-    print("-----------------------------------")
+# Create a list of the numbers
+numbers = [num1, num2, num3]
+
+# Calculate mean and standard deviation
+mean = statistics.mean(numbers)
+stdev = statistics.stdev(numbers)
+
+# Display results
+print(f"{mean:.4f}±{stdev:.4f}")
