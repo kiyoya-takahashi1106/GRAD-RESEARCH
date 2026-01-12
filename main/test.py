@@ -24,12 +24,13 @@ from model.clap import Clap
 from model.method_model import MethodModel
 
 from datasets.esc50_dataset import ESC50Dataset
+from datasets.us8k_dataset import US8KDataset
 
 
 def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", type=str)
-    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--dataset", type=str, help="esc50 or us8k")
     parser.add_argument("--hidden_dim", type=int)
     parser.add_argument("--dropout_rate", type=float)
     parser.add_argument("--saved_model_path", type=str)
@@ -63,7 +64,10 @@ def val(args):
         text_tokenizer = RobertaTokenizerFast.from_pretrained("roberta-large")
         audio_processor = Wav2Vec2FeatureExtractor.from_pretrained("ALM/wav2vec2-large-audioset")
 
-    test_dataset = ESC50Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
+    if (args.dataset == "esc50"):
+        test_dataset = ESC50Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
+    elif (args.dataset == "us8k"):
+        test_dataset = US8KDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
 
     # ===== 1. クラス側テキストの埋め込み =====
     text_input_ids = test_dataset.input_ids.to(device)        # (C, L)
