@@ -103,7 +103,7 @@ def train(args):
     elif (args.model_type == "method"):
         criterion = Criterion(args.sim_loss_type)
 
-    best_contractive = float('inf')
+    best_val_loss = float('inf')
 
     
     for epoch in range(args.epochs):
@@ -216,7 +216,7 @@ def train(args):
 
         # ===== Evaluation =====
         model.eval()
-        test_contractive_lst = []
+        val_loss_lst = []
 
         with torch.no_grad():
             # test_bar = tqdm(test_dataloader, desc=f"Test Epoch {epoch+1}/{args.epochs}", leave=False)
@@ -230,21 +230,47 @@ def train(args):
                 if (args.model_type == "clap"):
                     text_embedding, audio_embedding = model(text_embedding, audio_embedding)   
                 elif (args.model_type == "method"):
-                    common_text, common_audio, _, _, _, _ = model(text_embedding, audio_embedding)
-                    text_embedding = common_text
-                    audio_embedding = common_audio
+                    common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
 
-                contractive = compute_contrastive_similarity(text_embedding, audio_embedding)
-                contractive = args.hp_contrastive * contractive
-                test_contractive_lst.append(contractive.item())
+                # compute loss
+                if (args.model_type == "clap"):
+                    contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
+                elif (args.model_type == "method"):
+                    contractive_loss, sim_loss, c2p_text_loss, c2p_audio_loss, p2p_loss, recon_text_loss, recon_audio_loss  =   criterion.compute_loss(
+                                                                                                                                    text_embedding, audio_embedding,
+                                                                                                                                    common_text, common_audio,
+                                                                                                                                    private_text, private_audio,
+                                                                                                                                    recon_text, recon_audio
+                                                                                                                                )
+                    c2p_loss = (c2p_text_loss + c2p_audio_loss) / 2
+                    recon_loss = (recon_text_loss + recon_audio_loss) / 2
 
-        epoch_test_contractive = sum(test_contractive_lst) / len(test_contractive_lst)
-        writer.add_scalars('Loss/Test/Contrastive', {'Contrastive': epoch_test_contractive}, epoch)
-        print(f"Test Contrastive: {epoch_test_contractive:.6f}")
+                # recode loss
+                contractive_loss = args.hp_contrastive * contractive_loss
+                if (args.model_type == "clap"):
+                    loss = contractive_loss
+                    val_loss_lst.append(loss.item())
+                elif (args.model_type == "method"):
+                    if (args.sim_loss_type == "cos"):
+                        sim_loss = args.hp_sim * sim_loss
+                    elif (args.sim_loss_type == "cka"):
+                        sim_loss = args.hp_sim * sim_loss
+                    c2p_loss = args.hp_cp_diff * c2p_loss
+                    p2p_loss = args.hp_pp_diff * p2p_loss
+                    recon_loss = args.hp_recon * recon_loss
+
+                    # 全体loss
+                    loss = contractive_loss + sim_loss
+                    val_loss_lst.append(loss.item())
+
+        epoch_val_loss = sum(val_loss_lst) / len(val_loss_lst)
+        writer.add_scalars('Loss/Val', {'val_loss': epoch_val_loss}, epoch)
+        print(f"Val Loss: {epoch_val_loss:.6f}")
         
         # モデル保存
-        if (epoch_test_contractive < best_contractive):
-            best_contractive = epoch_test_contractive
+        # if (epoch == args.epochs - 1):
+        if (epoch_val_loss <= best_val_loss):
+            best_val_loss = epoch_val_loss
             # best_model_path = (
             #     f"saved_models/train/{args.model_type}_{args.dataset}/"
             #     f"epoch{epoch}.pth"
@@ -254,10 +280,10 @@ def train(args):
                 f"best.pth"
             )
             torch.save(model.state_dict(), best_model_path)
-            print(f"We've saved the new model (Contrastive: {best_contractive:.4f})")
+            print(f"We've saved the new model (Val Loss: {best_val_loss:.4f})")
         print("----------------------------------------------------------------------------")
 
-    print(f"Best Contrastive: {best_contractive:.4f}")
+    print(f"Best Val Loss: {best_val_loss:.4f}")
     writer.close()
     return
 
