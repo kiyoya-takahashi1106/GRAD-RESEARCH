@@ -53,6 +53,8 @@ class US8KDataset(Dataset):
         for folder_num in range(1, 11):
             audio_folder = f"{root_audio_folder}/fold{folder_num}"
             for filename in os.listdir(audio_folder):
+                if (not filename.endswith(".wav")):
+                    continue
                 class_idx = filename.split("-")[1]
                 class_ = self.classes[int(class_idx)]
                 samples.append((f"{audio_folder}/{filename}", class_))
@@ -90,7 +92,6 @@ class US8KDataset(Dataset):
         audio_input_values = processor_output["input_values"]
 
         # one-hot vector
-        class_ = f"{self.prompt} {class_}"
         one_hot_vec = torch.zeros(len(self.classes), dtype=torch.float)
         class_index = self.classes.index(class_)
         one_hot_vec[class_index] = 1.0
