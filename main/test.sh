@@ -17,5 +17,4 @@ for seed in "${seeds[@]}"; do
         --dropout_rate 0.1 \
         --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
         2>&1 | { [ "$zs_type" = "common" ] && tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log" || cat; }
-
 done
