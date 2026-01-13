@@ -25,6 +25,7 @@ from model.method_model import MethodModel
 
 from datasets.esc50_dataset import ESC50Dataset
 from datasets.us8k_dataset import US8KDataset
+from datasets.beijing_opera_dataset import BeijingOperaDataset
 
 
 def args():
@@ -68,6 +69,8 @@ def val(args):
         test_dataset = ESC50Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
     elif (args.dataset == "us8k"):
         test_dataset = US8KDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
+    elif (args.dataset == "beijing_opera"):
+        test_dataset = BeijingOperaDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
 
     # ===== 1. クラス側テキストの埋め込み =====
     text_input_ids = test_dataset.input_ids.to(device)        # (C, L)

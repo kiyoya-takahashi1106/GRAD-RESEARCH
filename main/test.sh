@@ -1,6 +1,6 @@
 model_type="method"
 training_dataset="mix"
-dataset="us8k"   # "esc50" or "us8k"
+dataset="beijing_opera"   # "esc50" or "us8k" or "beijing_opera"
 hidden_dim=768   # 768 or 1024
 
 mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
