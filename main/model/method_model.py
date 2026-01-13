@@ -11,7 +11,7 @@ from transformers import Wav2Vec2Model
 
 
 class MethodModel(nn.Module):
-    def __init__(self, hidden_dim: int, dropout_rate: float, saved_model_path: str = None):
+    def __init__(self, hidden_dim: int, dropout_rate: float, zs_type: str = "common", saved_model_path: str = None):
         super(MethodModel, self).__init__()
 
         # encoder
@@ -43,6 +43,8 @@ class MethodModel(nn.Module):
 
         self.dropout = nn.Dropout(dropout_rate)
 
+        self.zs_type = zs_type
+
         # val用に学習済みモデルをロード
         if (saved_model_path is not None):
             self.load_state_dict(torch.load(saved_model_path))
@@ -67,14 +69,31 @@ class MethodModel(nn.Module):
         return common_text, common_audio, private_text, private_audio, recon_text, recon_audio
     
     
-    # 推論用
+    # ZS用
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
         text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        common_text = self.common_text_linear(text_embedding)
-        return common_text
-    
-    # 推論用
+        if (self.zs_type == "common"):
+            text_embedding = self.common_text_linear(text_embedding)
+        elif (self.zs_type == "private"):
+            text_embedding = self.private_text_linear(text_embedding)
+        elif (self.zs_type == "add"):
+            text_embedding = self.common_text_linear(text_embedding) + self.private_text_linear(text_embedding)
+        elif (self.zs_type == "concat"):
+            common_text = self.common_text_linear(text_embedding)
+            private_text = self.private_text_linear(text_embedding)
+            text_embedding = torch.cat([common_text, private_text], dim=-1)
+        return text_embedding
+
     def encode_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
-        common_audio = self.common_audio_linear(audio_embedding)
-        return common_audio
+        if (self.zs_type == "common"):
+            audio_embedding = self.common_audio_linear(audio_embedding)
+        elif (self.zs_type == "private"):
+            audio_embedding = self.private_audio_linear(audio_embedding)
+        elif (self.zs_type == "add"):
+            audio_embedding = self.common_audio_linear(audio_embedding) + self.private_audio_linear(audio_embedding)
+        elif (self.zs_type == "concat"):
+            common_audio = self.common_audio_linear(audio_embedding)
+            private_audio = self.private_audio_linear(audio_embedding)
+            audio_embedding = torch.cat([common_audio, private_audio], dim=-1)
+        return audio_embedding

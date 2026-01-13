@@ -31,8 +31,9 @@ from datasets.beijing_opera_dataset import BeijingOperaDataset
 def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", type=str)
-    parser.add_argument("--dataset", type=str, help="esc50 or us8k")
+    parser.add_argument("--dataset", type=str, help="esc50 or us8k or beijing_opera")
     parser.add_argument("--hidden_dim", type=int)
+    parser.add_argument("--zs_type", type=str)
     parser.add_argument("--dropout_rate", type=float)
     parser.add_argument("--saved_model_path", type=str)
     args = parser.parse_args()
@@ -52,6 +53,7 @@ def val(args):
         model = MethodModel(
             hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
+            zs_type=args.zs_type,
             saved_model_path=args.saved_model_path
         )
         
