@@ -1,6 +1,6 @@
-model_type="method"
+model_type="method2"
 training_dataset="mix"
-dataset="vocal_sound"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound"
+dataset="beijing_opera"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound"
 hidden_dim=768   # 768 or 1024
 zs_type="common"   # "common" or "private" or "add" or "concat"
 

@@ -22,6 +22,7 @@ from transformers import RobertaTokenizerFast, Wav2Vec2Processor, Wav2Vec2Featur
 
 from model.clap import Clap
 from model.method_model import MethodModel
+from model.method2_model import Method2Model
 
 from datasets.esc50_dataset import ESC50Dataset
 from datasets.us8k_dataset import US8KDataset
@@ -52,6 +53,13 @@ def val(args):
         )
     elif (args.model_type == "method"):
         model = MethodModel(
+            hidden_dim=args.hidden_dim,
+            dropout_rate=args.dropout_rate,
+            zs_type=args.zs_type,
+            saved_model_path=args.saved_model_path
+        )
+    elif (args.model_type == "method2"):
+        model = Method2Model(
             hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
             zs_type=args.zs_type,

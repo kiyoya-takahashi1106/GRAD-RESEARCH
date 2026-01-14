@@ -20,6 +20,7 @@ from functools import partial
 
 from model.clap import Clap
 from model.method_model import MethodModel
+from model.method2_model import Method2Model
 
 from datasets.fea_dataset import FeaDataset
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +34,7 @@ from utils.loss import Criterion
 
 def args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", type=str, help="clap or method")
+    parser.add_argument("--model_type", type=str, help="clap or method or method2")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--dataset", type=str, help="audiocaps or fsd50k or clotho or macs or mix")
     parser.add_argument("--lr", type=float)
@@ -63,6 +64,13 @@ def train(args):
         model = MethodModel(
             hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate
+        )
+    elif (args.model_type == "method2"):
+        trained_clap_model_path = f"./saved_models/{args.hidden_dim}/clap_{args.dataset}/best{args.seed}.pth"
+        model = Method2Model(
+            hidden_dim=args.hidden_dim,
+            dropout_rate=args.dropout_rate,
+            saved_model_path=trained_clap_model_path,
         )
     
     # TensorBoard Writer設定
@@ -100,7 +108,7 @@ def train(args):
 
     if (args.model_type == "clap"):
         criterion = ClapCriterion()
-    elif (args.model_type == "method"):
+    elif (args.model_type == "method"  or  args.model_type == "method2"):
         criterion = Criterion(args.sim_loss_type)
 
     best_val_loss = float('inf')
@@ -127,13 +135,13 @@ def train(args):
             # forward
             if (args.model_type == "clap"):      
                 text_embedding, audio_embedding = model(text_embedding, audio_embedding)
-            elif (args.model_type == "method"):                         
+            elif (args.model_type == "method"  or  args.model_type == "method2"):                         
                 common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
-
+        
             # compute loss
             if (args.model_type == "clap"):
                 contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
-            elif (args.model_type == "method"):
+            elif (args.model_type == "method"  or  args.model_type == "method2"):
                 contractive_loss, sim_loss, c2p_text_loss, c2p_audio_loss, p2p_loss, recon_text_loss, recon_audio_loss  =   criterion.compute_loss(
                                                                                                                                 text_embedding, audio_embedding,
                                                                                                                                 common_text, common_audio,
@@ -149,7 +157,7 @@ def train(args):
             if (args.model_type == "clap"):
                 loss = contractive_loss
                 loss_lst.append(loss.item())
-            elif (args.model_type == "method"):
+            elif (args.model_type == "method"  or  args.model_type == "method2"):
                 if (args.sim_loss_type == "cos"):
                     sim_loss = args.hp_sim * sim_loss
                     sim_loss2 = sim_loss * (epoch+1) / args.epochs
@@ -165,10 +173,11 @@ def train(args):
 
                 # 全体loss
                 if (args.sim_loss_type == "cos"):
-                    if (epoch < 5):
-                        loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
-                    else:
-                        loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
+                    # if (epoch < 5):
+                    #     loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
+                    # else:
+                    #     loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
+                    loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
                 elif (args.sim_loss_type == "cka"):
                     loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())
@@ -176,7 +185,7 @@ def train(args):
             # if ((epoch == 0)):
             #     print("===== INIT =====")
             #     print(f"Contractive Loss: {contractive_loss.item():.6f}")
-            #     if (args.model_type == "method"):
+            #     if (args.model_type == "method"  or  args.model_type == "method2"):
             #         print(f"Sim Loss: {sim_loss.item():.6f}")
             #         print(f"C2P Loss: {c2p_loss.item():.6f}")
             #         print(f"P2P Loss: {p2p_loss.item():.6f}")
@@ -193,7 +202,7 @@ def train(args):
 
         # loss表示
         print(f"Epoch {epoch}")
-        if (args.model_type == "method"):
+        if (args.model_type == "method"  or  args.model_type == "method2"):
             epoch_contractive_loss = sum(contractive_loss_lst) / len(contractive_loss_lst)
             writer.add_scalars('Loss/Train/contractive_Losses', {'Contractive': epoch_contractive_loss}, epoch)
             print(f"Contractive: {epoch_contractive_loss:.6f}")
@@ -229,13 +238,13 @@ def train(args):
 
                 if (args.model_type == "clap"):
                     text_embedding, audio_embedding = model(text_embedding, audio_embedding)   
-                elif (args.model_type == "method"):
+                elif (args.model_type == "method"  or  args.model_type == "method2"):
                     common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
 
                 # compute loss
                 if (args.model_type == "clap"):
                     contractive_loss = criterion.compute_loss(text_embedding, audio_embedding)
-                elif (args.model_type == "method"):
+                elif (args.model_type == "method"  or  args.model_type == "method2"):
                     contractive_loss, sim_loss, c2p_text_loss, c2p_audio_loss, p2p_loss, recon_text_loss, recon_audio_loss  =   criterion.compute_loss(
                                                                                                                                     text_embedding, audio_embedding,
                                                                                                                                     common_text, common_audio,
@@ -250,7 +259,7 @@ def train(args):
                 if (args.model_type == "clap"):
                     loss = contractive_loss
                     val_loss_lst.append(loss.item())
-                elif (args.model_type == "method"):
+                elif (args.model_type == "method"  or  args.model_type == "method2"):
                     if (args.sim_loss_type == "cos"):
                         sim_loss = args.hp_sim * sim_loss
                     elif (args.sim_loss_type == "cka"):
@@ -272,6 +281,7 @@ def train(args):
         # if (epoch == args.epochs - 1):
         if (epoch_val_loss <= best_val_loss):
             best_val_loss = epoch_val_loss
+            os.makedirs(os.path.dirname(f"saved_models/{args.hidden_dim}/{args.model_type}_{args.dataset}/"), exist_ok=True)
             best_model_path = (
                 f"saved_models/{args.hidden_dim}/{args.model_type}_{args.dataset}/"
                 f"best{args.seed}.pth"
