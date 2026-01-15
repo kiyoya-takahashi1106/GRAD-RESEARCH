@@ -1,6 +1,6 @@
-model_type="method2"
+model_type="method2"   # help: "clap", "method", "method2"
 training_dataset="mix"
-dataset="beijing_opera"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound"
+dataset="tut2017"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound" or "tut2017"
 hidden_dim=768   # 768 or 1024
 zs_type="common"   # "common" or "private" or "add" or "concat"
 
