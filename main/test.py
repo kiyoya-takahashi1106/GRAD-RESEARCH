@@ -29,12 +29,13 @@ from datasets.us8k_dataset import US8KDataset
 from datasets.beijing_opera_dataset import BeijingOperaDataset
 from datasets.vocal_sound_dataset import VocalSoundDataset
 from datasets.tut2017_dataset import TUT2017Dataset
+from datasets.mri_stroke_dataset import MriStrokeDataset
 
 
 def args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_type", type=str)
-    parser.add_argument("--dataset", type=str, help="esc50 or us8k or beijing_opera or vocal_sound or tut2017")
+    parser.add_argument("--dataset", type=str, help="esc50 or us8k or beijing_opera or vocal_sound or tut2017 or mri_stroke")
     parser.add_argument("--hidden_dim", type=int)
     parser.add_argument("--zs_type", type=str)
     parser.add_argument("--dropout_rate", type=float)
@@ -87,6 +88,12 @@ def val(args):
         test_dataset = VocalSoundDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
     elif (args.dataset == "tut2017"):
         test_dataset = TUT2017Dataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
+    elif (args.dataset == "mri_stroke"):
+        test_dataset = MriStrokeDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
+    print(f"Test dataset size: {len(test_dataset)}")
+    print(test_dataset.classes)
+    print(test_dataset[0])
+
 
     # ===== 1. クラス側テキストの埋め込み =====
     text_input_ids = test_dataset.input_ids.to(device)        # (C, L)
