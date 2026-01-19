@@ -91,8 +91,6 @@ def val(args):
     elif (args.dataset == "mri_stroke"):
         test_dataset = MriStrokeDataset(text_tokenizer=text_tokenizer, audio_processor=audio_processor, split="None")
     print(f"Test dataset size: {len(test_dataset)}")
-    print(test_dataset.classes)
-    print(test_dataset[0])
 
 
     # ===== 1. クラス側テキストの埋め込み =====
@@ -105,9 +103,11 @@ def val(args):
 
     # ===== 2. 各音声サンプルの zero-shot 推論 =====
     y_preds, y_labels = [], []
+    pos_sims, neg_sims = [], []
 
     for i in range(len(test_dataset)):
         audio_x, attn_mask, one_hot_target = test_dataset[i]
+        gt_class = int(torch.argmax(one_hot_target).item())
 
         audio_x = audio_x.to(device)
         attn_mask = attn_mask.to(device)
@@ -118,9 +118,10 @@ def val(args):
 
             # audio (1,D) × text.T (D,C) = (1,C)
             similarity = audio_embedding @ text_embeddings.T
+            similarity = similarity.squeeze(0)  # (C,)
 
             # softmax でクラス確率に
-            probs = F.softmax(similarity, dim=-1).detach().cpu().numpy()  # (1, C)
+            probs = F.softmax(similarity.unsqueeze(0), dim=-1).detach().cpu().numpy()  # (1, C)
 
         # one-hot も numpy に
         one_hot_np = one_hot_target.detach().cpu().numpy()[None, :]       # (1, C)
@@ -128,13 +129,28 @@ def val(args):
         y_preds.append(probs)
         y_labels.append(one_hot_np)
 
+        # Cosine similarity stats
+        pos_sims.append(similarity[gt_class].item())
+        # vectorized negatives
+        neg_mask = torch.ones(len(similarity), dtype=torch.bool)
+        neg_mask[gt_class] = False
+        neg_sims.extend(similarity[neg_mask].detach().cpu().tolist())
+
     # ===== 3. 精度計算 =====
     y_labels = np.concatenate(y_labels, axis=0)  # (N, C)
     y_preds = np.concatenate(y_preds, axis=0)    # (N, C)
 
     acc = accuracy_score(np.argmax(y_labels, axis=1),
                          np.argmax(y_preds, axis=1))
-    print(f"{args.dataset} Zero-shot Accuracy: {acc:.4f}")
+    
+    # Cosine similarity stats
+    pos_sims = np.array(pos_sims, dtype=np.float32)
+    neg_sims = np.array(neg_sims, dtype=np.float32)
+
+    print(f"\n{args.dataset} Zero-shot Accuracy: {acc:.4f}")
+    print("Cosine similarity (L2-normalized dot):")
+    print(f"  positive = {pos_sims.mean():.4f}")
+    print(f"  negative = {neg_sims.mean():.4f}")
 
     return acc
 
