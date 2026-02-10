@@ -1,20 +1,24 @@
-model_type="clap"   # help: "clap", "method", "method2"
+model_type="method"   # help: "clap", "method", "method2",  "ablation"
 training_dataset="mix"
-dataset="mri_stroke"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound" or "tut2017" or "mri_stroke"
+datasets=("esc50" "us8k" "beijing_opera" "vocal_sound" "tut2017")
 hidden_dim=768   # 768 or 1024
-zs_type="common"   # "common" or "private" or "add" or "concat"
+zs_type="common"   # "common" or "private" or "cp" or "pc" or "concat"
 
 mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
 
 seeds=(41 42 43)
 
-for seed in "${seeds[@]}"; do
-    python -u test.py \
-        --model_type ${model_type} \
-        --dataset ${dataset} \
-        --hidden_dim ${hidden_dim} \
-        --zs_type ${zs_type} \
-        --dropout_rate 0.1 \
-        --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
-        2>&1 | { [ "$zs_type" = "common" ] && tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log" || cat; }
+for dataset in "${datasets[@]}"; do
+     mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
+
+    for seed in "${seeds[@]}"; do
+        python -u test.py \
+            --model_type ${model_type} \
+            --dataset ${dataset} \
+            --hidden_dim ${hidden_dim} \
+            --zs_type ${zs_type} \
+            --dropout_rate 0.1 \
+            --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
+            2>&1 | { [ "$zs_type" = "common" ] && tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log" || cat; }
+    done
 done

@@ -30,6 +30,7 @@ class ClapCriterion:
         return loss
     
 
+
 class Criterion:
     def __init__(self, sim_loss_type):
         self.sim_loss_type = sim_loss_type
@@ -37,7 +38,7 @@ class Criterion:
     def compute_loss(self, text_embedding, audio_embedding, common_text, common_audio, private_text, private_audio, recon_text, recon_audio):
         """
         Contrastive loss
-        L2 loss
+        Sim loss
         Diff Loss *3
         Reconstruction loss *2
         """
@@ -192,3 +193,74 @@ class Criterion:
         """
         loss = F.mse_loss(embedding, recon)
         return loss
+    
+
+
+class AblationCriterion:
+    def __init__(self, sim_loss_type):
+        self.sim_loss_type = sim_loss_type
+
+    def compute_loss(self, common_text, common_audio):
+        """
+        Contrastive loss
+        Sim loss
+        """
+        contractive_loss = self.compute_contrastive_loss(common_text, common_audio)
+        if (self.sim_loss_type == "cos"):
+            sim_loss = self.compute_sim_cos_loss(common_text, common_audio)
+        elif (self.sim_loss_type == "cka"):
+            sim_loss = self.compute_sim_cka_loss(common_text, common_audio)
+        return contractive_loss, sim_loss
+    
+    
+    def compute_contrastive_loss(self, common_text, common_audio):
+        """
+        共通特徴に対して、コントラスト学習を行う
+        """
+        batch_size = common_text.size(0)
+        temperature = 0.1
+
+        # 正規化
+        common_text_norm = F.normalize(common_text, p=2, dim=1)
+        common_audio_norm = F.normalize(common_audio, p=2, dim=1)
+
+        # 類似度計算
+        logits = torch.matmul(common_text_norm, common_audio_norm.T) / temperature
+
+        labels = torch.arange(batch_size).to(common_text.device)
+
+        loss_text_to_audio = F.cross_entropy(logits, labels)
+        loss_audio_to_text = F.cross_entropy(logits.T, labels)
+
+        loss = (loss_text_to_audio + loss_audio_to_text) / 2
+        return loss
+
+
+    def compute_sim_cos_loss(self, common_text, common_audio):
+        """
+        共通特徴に対して、内積を計算する
+        """
+        common_text_norm = F.normalize(common_text, p=2, dim=-1)
+        common_audio_norm = F.normalize(common_audio, p=2, dim=-1)
+        sim = torch.sum(common_text_norm * common_audio_norm, dim=-1)
+        sim = sim.mean()
+        sim_loss = 1.0 - sim
+        return sim_loss
+    
+    
+    def compute_sim_cka_loss(self, common_text, common_audio):
+        """
+        CKAに基づく類似度損失を計算する
+        """
+        X = common_text - common_text.mean(dim=0, keepdim=True)
+        Y = common_audio - common_audio.mean(dim=0, keepdim=True)
+        XT_Y = X.T @ Y
+        XTX = X.T @ X
+        YTY = Y.T @ Y
+        hsic = (XT_Y ** 2).sum()
+        eps = 1e-8
+        norm_x = torch.sqrt((XTX ** 2).sum() + eps)
+        norm_y = torch.sqrt((YTY ** 2).sum() + eps)
+        cka = hsic / (norm_x * norm_y + eps)
+        sim_loss = 1.0 - cka
+        return sim_loss

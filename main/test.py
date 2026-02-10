@@ -34,10 +34,10 @@ from datasets.mri_stroke_dataset import MriStrokeDataset
 
 def args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", type=str)
+    parser.add_argument("--model_type", type=str, help="clap or method or method2 or ablation")
     parser.add_argument("--dataset", type=str, help="esc50 or us8k or beijing_opera or vocal_sound or tut2017 or mri_stroke")
     parser.add_argument("--hidden_dim", type=int)
-    parser.add_argument("--zs_type", type=str)
+    parser.add_argument("--zs_type", type=str, help="common or private or cp or pc or concat")
     parser.add_argument("--dropout_rate", type=float)
     parser.add_argument("--saved_model_path", type=str)
     args = parser.parse_args()
@@ -65,6 +65,12 @@ def val(args):
             hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
             zs_type=args.zs_type,
+            saved_model_path=args.saved_model_path
+        )
+    elif (args.model_type == "ablation"):
+        model = Clap(
+            hidden_dim=args.hidden_dim,
+            dropout_rate=args.dropout_rate,
             saved_model_path=args.saved_model_path
         )
         
@@ -147,10 +153,11 @@ def val(args):
     pos_sims = np.array(pos_sims, dtype=np.float32)
     neg_sims = np.array(neg_sims, dtype=np.float32)
 
-    print(f"\n{args.dataset} Zero-shot Accuracy: {acc:.4f}")
+    print(f"{args.dataset} Zero-shot Accuracy: {acc:.4f}")
     print("Cosine similarity (L2-normalized dot):")
-    print(f"  positive = {pos_sims.mean():.4f}")
-    print(f"  negative = {neg_sims.mean():.4f}")
+    print(f"  positive = {pos_sims.mean():.4f}±{pos_sims.std():.4f}")
+    print(f"  negative = {neg_sims.mean():.4f}±{neg_sims.std():.4f}")
+    print(f"\n")
 
     return acc
 

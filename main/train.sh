@@ -1,10 +1,11 @@
 # ===== TRAINING =====
-model_type="method2"   # help: "clap", "method", "method2"
-dataset="mix"   # help: "audiocaps", "fsd50k", "clotho",  "mix"
-batch_size=256   # help: 32, 64, 128, 256, 512, 768
-hidden_dim=768   # 768 or 1024
-
 seeds=(41 42 43)
+model_type="ablation"   # help: "clap", "method", "method2", "ablation"
+batch_size=256   # help: 32, 64, 128, 256, 512, 768, 1024, 2048, 4096
+epoch=80
+
+dataset="mix"   # help: "audiocaps", "fsd50k", "clotho",  "mix"
+hidden_dim=768   # 768 or 1024
 
 mkdir -p logs/train_${hidden_dim}/${model_type}_${dataset}
 
@@ -14,7 +15,7 @@ for seed in "${seeds[@]}"; do
         --seed ${seed} \
         --dataset ${dataset} \
         --lr 1e-3 \
-        --epochs 40 \
+        --epochs ${epoch} \
         --batch_size ${batch_size} \
         --hidden_dim ${hidden_dim} \
         --dropout_rate 0.1 \
@@ -31,17 +32,20 @@ done
 
 # ===== TESTING =====
 training_dataset="${dataset}"
-dataset="esc50"   # "esc50" or "us8k" or "beijing_opera" or "vocal_sound" or "tut2017" or "mri_stroke"
+datasets=("esc50" "us8k" "beijing_opera" "vocal_sound" "tut2017")
+# datasets={}
 
-mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
+for dataset in "${datasets[@]}"; do
+    mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
 
-for seed in "${seeds[@]}"; do
-    python -u test.py \
-        --model_type ${model_type} \
-        --dataset ${dataset} \
-        --hidden_dim ${hidden_dim} \
-        --zs_type "common" \
-        --dropout_rate 0.1 \
-        --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
-        2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log"
+    for seed in "${seeds[@]}"; do
+        python -u test.py \
+            --model_type ${model_type} \
+            --dataset ${dataset} \
+            --hidden_dim ${hidden_dim} \
+            --zs_type "common" \
+            --dropout_rate 0.1 \
+            --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
+            2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log"
+    done
 done

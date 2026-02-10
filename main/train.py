@@ -30,11 +30,12 @@ from utils.utility import set_seed
 from utils.utility import compute_contrastive_similarity
 from utils.loss import ClapCriterion
 from utils.loss import Criterion
+from utils.loss import AblationCriterion
 
 
 def args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_type", type=str, help="clap or method or method2")
+    parser.add_argument("--model_type", type=str, help="clap or method or method2 or ablation")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--dataset", type=str, help="audiocaps or fsd50k or clotho or macs or mix")
     parser.add_argument("--lr", type=float)
@@ -71,6 +72,12 @@ def train(args):
             hidden_dim=args.hidden_dim,
             dropout_rate=args.dropout_rate,
             saved_model_path=trained_clap_model_path,
+        )
+    elif (args.model_type == "ablation"):
+        # 各モダリティに1の線形変換、LossはInfoNCE+Lsim
+        model = Clap(
+            hidden_dim=args.hidden_dim,
+            dropout_rate=args.dropout_rate
         )
     
     # TensorBoard Writer設定
@@ -110,6 +117,8 @@ def train(args):
         criterion = ClapCriterion()
     elif (args.model_type == "method"  or  args.model_type == "method2"):
         criterion = Criterion(args.sim_loss_type)
+    elif (args.model_type == "ablation"):
+        criterion = AblationCriterion(args.sim_loss_type)
 
     best_val_loss = float('inf')
 
@@ -137,6 +146,8 @@ def train(args):
                 text_embedding, audio_embedding = model(text_embedding, audio_embedding)
             elif (args.model_type == "method"  or  args.model_type == "method2"):                         
                 common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
+            elif (args.model_type == "ablation"):
+                common_text, common_audio = model(text_embedding, audio_embedding)
         
             # compute loss
             if (args.model_type == "clap"):
@@ -150,6 +161,8 @@ def train(args):
                                                                                                                             )
                 c2p_loss = (c2p_text_loss + c2p_audio_loss) / 2
                 recon_loss = (recon_text_loss + recon_audio_loss) / 2
+            elif (args.model_type == "ablation"):
+                contractive_loss, sim_loss = criterion.compute_loss(common_text, common_audio)
 
             # recode loss
             contractive_loss = args.hp_contrastive * contractive_loss
@@ -170,7 +183,6 @@ def train(args):
                 p2p_loss_lst.append(p2p_loss.item())
                 recon_loss = args.hp_recon * recon_loss
                 recon_loss_lst.append(recon_loss.item())
-
                 # 全体loss
                 if (args.sim_loss_type == "cos"):
                     # if (epoch < 5):
@@ -180,6 +192,15 @@ def train(args):
                     loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
                 elif (args.sim_loss_type == "cka"):
                     loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
+                loss_lst.append(loss.item())
+            elif (args.model_type == "ablation"):
+                if (args.sim_loss_type == "cos"):
+                    sim_loss = args.hp_sim * sim_loss
+                elif (args.sim_loss_type == "cka"):
+                    sim_loss = args.hp_sim * sim_loss
+                sim_loss_lst.append(sim_loss.item())
+                # 全体loss
+                loss = contractive_loss + sim_loss
                 loss_lst.append(loss.item())
 
             # if ((epoch == 0)):
@@ -218,6 +239,13 @@ def train(args):
             epoch_recon_loss = sum(recon_loss_lst) / len(recon_loss_lst)
             writer.add_scalars('Loss/Train/recon_Losses', {'Reconstruction': epoch_recon_loss}, epoch)
             print(f"Reconstruction: {epoch_recon_loss:.6f}")
+        elif (args.model_type == "ablation"):
+            epoch_contractive_loss = sum(contractive_loss_lst) / len(contractive_loss_lst)
+            writer.add_scalars('Loss/Train/contractive_Losses', {'Contractive': epoch_contractive_loss}, epoch)
+            print(f"Contractive: {epoch_contractive_loss:.6f}")
+            epoch_sim_loss = sum(sim_loss_lst) / len(sim_loss_lst)
+            writer.add_scalars('Loss/Train/sim_Losses', {'Sim': epoch_sim_loss}, epoch)
+            print(f"Sim: {epoch_sim_loss:.6f}")
         epoch_loss = sum(loss_lst) / len(loss_lst)
         writer.add_scalars('Loss/Train/overall_Losses', {'Overall': epoch_loss}, epoch)
         print(f"OverALL: {epoch_loss:.6f}")
@@ -240,6 +268,8 @@ def train(args):
                     text_embedding, audio_embedding = model(text_embedding, audio_embedding)   
                 elif (args.model_type == "method"  or  args.model_type == "method2"):
                     common_text, common_audio, private_text, private_audio, recon_text, recon_audio = model(text_embedding, audio_embedding)
+                elif (args.model_type == "ablation"):
+                    common_text, common_audio = model(text_embedding, audio_embedding)
 
                 # compute loss
                 if (args.model_type == "clap"):
@@ -253,6 +283,8 @@ def train(args):
                                                                                                                                 )
                     c2p_loss = (c2p_text_loss + c2p_audio_loss) / 2
                     recon_loss = (recon_text_loss + recon_audio_loss) / 2
+                elif (args.model_type == "ablation"):
+                    contractive_loss, sim_loss = criterion.compute_loss(common_text, common_audio)
 
                 # recode loss
                 contractive_loss = args.hp_contrastive * contractive_loss
@@ -267,7 +299,14 @@ def train(args):
                     c2p_loss = args.hp_cp_diff * c2p_loss
                     p2p_loss = args.hp_pp_diff * p2p_loss
                     recon_loss = args.hp_recon * recon_loss
-
+                    # 全体loss
+                    loss = contractive_loss + sim_loss
+                    val_loss_lst.append(loss.item())
+                elif (args.model_type == "ablation"):
+                    if (args.sim_loss_type == "cos"):
+                        sim_loss = args.hp_sim * sim_loss
+                    elif (args.sim_loss_type == "cka"):
+                        sim_loss = args.hp_sim * sim_loss
                     # 全体loss
                     loss = contractive_loss + sim_loss
                     val_loss_lst.append(loss.item())
