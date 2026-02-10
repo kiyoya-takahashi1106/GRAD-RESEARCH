@@ -72,12 +72,10 @@ class MethodModel(nn.Module):
     # ZS用
     def encode_text(self, text_x: torch.Tensor, text_attn_mask: torch.Tensor):
         text_embedding = self.text_encoder(text_x, attention_mask=text_attn_mask).last_hidden_state[:,0,:]
-        if (self.zs_type == "common"):
+        if (self.zs_type == "common"  or  self.zs_type == "cp"):
             text_embedding = self.common_text_linear(text_embedding)
-        elif (self.zs_type == "private"):
+        elif (self.zs_type == "private"  or  self.zs_type == "pc"):
             text_embedding = self.private_text_linear(text_embedding)
-        elif (self.zs_type == "add"):
-            text_embedding = self.common_text_linear(text_embedding) + self.private_text_linear(text_embedding)
         elif (self.zs_type == "concat"):
             common_text = self.common_text_linear(text_embedding)
             private_text = self.private_text_linear(text_embedding)
@@ -86,12 +84,10 @@ class MethodModel(nn.Module):
 
     def encode_audio(self, audio_x: torch.Tensor, audio_attn_mask: torch.Tensor):
         audio_embedding = self.audio_encoder(audio_x, attention_mask=audio_attn_mask).last_hidden_state.mean(dim=1)
-        if (self.zs_type == "common"):
+        if (self.zs_type == "common"  or  self.zs_type == "pc"):
             audio_embedding = self.common_audio_linear(audio_embedding)
-        elif (self.zs_type == "private"):
+        elif (self.zs_type == "private"  or  self.zs_type == "cp"):
             audio_embedding = self.private_audio_linear(audio_embedding)
-        elif (self.zs_type == "add"):
-            audio_embedding = self.common_audio_linear(audio_embedding) + self.private_audio_linear(audio_embedding)
         elif (self.zs_type == "concat"):
             common_audio = self.common_audio_linear(audio_embedding)
             private_audio = self.private_audio_linear(audio_embedding)
