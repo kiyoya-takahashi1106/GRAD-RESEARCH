@@ -185,11 +185,10 @@ def train(args):
                 recon_loss_lst.append(recon_loss.item())
                 # 全体loss
                 if (args.sim_loss_type == "cos"):
-                    # if (epoch < 5):
-                    #     loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
-                    # else:
-                    #     loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
-                    loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
+                    if (epoch < 5):
+                        loss = contractive_loss + c2p_loss + p2p_loss + recon_loss
+                    else:
+                        loss = contractive_loss + sim_loss2 + c2p_loss + p2p_loss + recon_loss
                 elif (args.sim_loss_type == "cka"):
                     loss = contractive_loss + sim_loss + c2p_loss + p2p_loss + recon_loss
                 loss_lst.append(loss.item())

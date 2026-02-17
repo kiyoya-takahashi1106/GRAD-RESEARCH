@@ -2,7 +2,7 @@ import re
 import statistics
 from pathlib import Path
 
-model_type = "ablation"   # help: "clap", "method", "method2",  "ablation"
+model_type = "method"   # help: "clap", "method", "method2",  "ablation"
 datasets = ["esc50", "us8k", "beijing_opera", "vocal_sound", "tut2017"]
 seeds = [41, 42, 43]
 
