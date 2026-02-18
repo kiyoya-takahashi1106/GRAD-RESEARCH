@@ -101,6 +101,6 @@ with torch.no_grad():
             )
 
 # Save fea
-save_path = f"../data/{args.dataset}/fea{args.hidden_dim}_coco.pt"
+save_path = f"../data/{args.dataset}/fea{args.hidden_dim}_imageNet.pt"
 torch.save(fea_dct, save_path)
 print(f"Saved fea to {save_path}")
