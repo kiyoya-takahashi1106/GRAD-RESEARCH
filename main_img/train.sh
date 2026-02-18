@@ -30,22 +30,21 @@ done
 
 
 
-# # ===== TESTING =====
-# training_dataset="${dataset}"
-# datasets=("esc50" "us8k" "beijing_opera" "vocal_sound" "tut2017")
-# # datasets={}
+# ===== TESTING =====
+training_dataset="${dataset}"
+datasets=("caltech101")
 
-# for dataset in "${datasets[@]}"; do
-#     mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
+for dataset in "${datasets[@]}"; do
+    mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
 
-#     for seed in "${seeds[@]}"; do
-#         python -u test.py \
-#             --model_type ${model_type} \
-#             --dataset ${dataset} \
-#             --hidden_dim ${hidden_dim} \
-#             --zs_type "common" \
-#             --dropout_rate 0.1 \
-#             --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
-#             2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log"
-#     done
-# done
+    for seed in "${seeds[@]}"; do
+        python -u test.py \
+            --model_type ${model_type} \
+            --dataset ${dataset} \
+            --hidden_dim ${hidden_dim} \
+            --zs_type "common" \
+            --dropout_rate 0.1 \
+            --saved_model_path "./saved_models/${hidden_dim}/${model_type}_${training_dataset}/best${seed}.pth" \
+            2>&1 | tee "logs/test_${hidden_dim}/${model_type}_${training_dataset}/${dataset}_${seed}.log"
+    done
+done
