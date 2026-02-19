@@ -1,6 +1,6 @@
 # ===== TRAINING =====
 seeds=(41 42 43)
-model_type="clip"   # help: "clip", "method", "method2", "ablation"
+model_type="method"   # help: "clip", "method", "method2", "ablation"
 batch_size=256   # help: 32, 64, 128, 256, 512, 768, 1024, 2048, 4096
 epoch=80
 
@@ -32,7 +32,7 @@ done
 
 # ===== TESTING =====
 training_dataset="${dataset}"
-datasets=("caltech101", "oxford_pet")
+datasets=("caltech101" "oxford_pet")
 
 for dataset in "${datasets[@]}"; do
     mkdir -p logs/test_${hidden_dim}/${model_type}_${training_dataset}
