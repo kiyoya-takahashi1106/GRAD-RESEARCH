@@ -25,6 +25,7 @@ from model.clip import Clip
 from model.method_model import MethodModel
 
 from datasets.caltech101_dataset import Caltech101Dataset
+from datasets.oxford_pet_dataset import OxfordPetDataset
 
 
 def args():
@@ -69,6 +70,10 @@ def val(args):
 
     if (args.dataset == "caltech101"):
         test_dataset = Caltech101Dataset(text_tokenizer=text_tokenizer, img_processor=img_processor, split="None")
+    elif (args.dataset == "oxford_pet"):
+        test_dataset = OxfordPetDataset(text_tokenizer=text_tokenizer, img_processor=img_processor, split="None")
+    else:
+        raise ValueError(f"Unsupported dataset: {args.dataset}")
     print(f"Test dataset size: {len(test_dataset)}")
 
 

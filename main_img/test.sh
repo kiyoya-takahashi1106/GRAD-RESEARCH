@@ -1,6 +1,6 @@
 model_type="method"   # help: "clip", "method", "method2",  "ablation"
 training_dataset="coco"
-datasets=("caltech101")
+datasets=("oxford_pet" "caltech101")
 hidden_dim=768   # 768 or 1024
 zs_type="common"   # "common" or "private" or "cp" or "pc" or "concat"
 
