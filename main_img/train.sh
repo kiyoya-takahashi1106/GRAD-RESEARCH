@@ -1,6 +1,6 @@
 # ===== TRAINING =====
 seeds=(41 42 43)
-model_type="method"   # help: "clip", "method", "method2", "ablation"
+model_type="ablation"   # help: "clip", "method", "method2", "ablation"
 batch_size=256   # help: 32, 64, 128, 256, 512, 768, 1024, 2048, 4096
 epoch=80
 

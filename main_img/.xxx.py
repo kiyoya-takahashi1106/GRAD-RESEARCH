@@ -2,7 +2,7 @@ import re
 import statistics
 from pathlib import Path
 
-model_type = "method"   # help: "clip", "method", "method2",  "ablation"
+model_type = "ablation"   # help: "clip", "method", "method2",  "ablation"
 datasets = ["caltech101", "oxford_pet"]
 seeds = [41, 42, 43]
 
